@@ -17,6 +17,7 @@
 import cv2, sys, time
 from calculators.image import *
 from calculators.mqtt import *
+from calculators.hand import *
 from google.protobuf import text_format
 import pipeconfig_pb2
 import sched, threading
