@@ -21,13 +21,13 @@ class PipeCli(Cmd):
         self.camera = 0
 
     def do_exit(self, inp):
-        '''exit the application.'''
+        """exit the application."""
         print("Bye")
         self.pipeline.exit()
         return True
 
     def do_setvideo(self, inp):
-        '''set the current (default) video stream input. (setvideo <source>)'''
+        """set the current (default) video stream input. (setvideo <source>)"""
         print("Set video input '{}'".format(inp))
         self.camera = inp
 

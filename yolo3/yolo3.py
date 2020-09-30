@@ -1,4 +1,5 @@
-import cv2, numpy as np
+import cv2
+import numpy as np
 from PIL import Image
 import os.path
 import colorsys
@@ -6,23 +7,25 @@ import urllib.request
 
 # Give the configuration and weight files for the model and load the network using them.
 
-modelConfiguration = "cfg/yolov3.cfg";
-modelWeights = "yolov3.weights";
+modelConfiguration = "cfg/yolov3.cfg"
+modelWeights = "yolov3.weights"
 modelUrl = "https://pjreddie.com/media/files/yolov3.weights"
-classesFile = "data/coco.names";
+classesFile = "data/coco.names"
 
-#modelConfiguration = "cfg/yolov4.cfg";
-#modelWeights = "yolov4.weights";
+# modelConfiguration = "cfg/yolov4.cfg";
+# modelWeights = "yolov4.weights";
+
 
 def show_progress(block_num, block_size, total_size):
     downloaded = block_num * block_size
     if downloaded < total_size:
-        print("\033[F Downloaded:",downloaded, " bytes of ", total_size)
+        print("\033[F Downloaded:", downloaded, " bytes of ", total_size)
+
 
 class YoloV3:
 
-    inpWidth = 416       #Width of network's input image
-    inpHeight = 416      #Height of network's input image
+    inpWidth = 416       # Width of network's input image
+    inpHeight = 416      # Height of network's input image
     drawPerformance = True
     
     def __init__(self, confThreshold, nmsThreshold, datapath="yolo3/"):
@@ -32,7 +35,7 @@ class YoloV3:
 
         if not os.path.isfile(datapath + "/" + modelWeights):
             print("downloading weights: " + modelUrl + " to " + datapath + "/" + modelWeights + "\n")
-            print(urllib.request.urlretrieve(modelUrl, datapath + "/" + modelWeights, reporthook = show_progress))
+            print(urllib.request.urlretrieve(modelUrl, datapath + "/" + modelWeights, reporthook=show_progress))
         
         self.net = cv2.dnn.readNetFromDarknet(datapath + "/" + modelConfiguration, datapath + "/" + modelWeights)
         self.net.setPreferableBackend(cv2.dnn.DNN_BACKEND_OPENCV)
@@ -41,10 +44,10 @@ class YoloV3:
             self.classes = f.read().rstrip('\n').split('\n')
         # Generate colors for drawing bounding boxes.
         hsv_tuples = [(x / len(self.classes), 1., 1.)
-                    for x in range(len(self.classes))]
+                      for x in range(len(self.classes))]
         self.colors = list(map(lambda x: colorsys.hsv_to_rgb(*x), hsv_tuples))
         self.colors = list(map(lambda x: (int(x[0] * 255), int(x[1] * 255), int(x[2] * 255)),
-                        self.colors))
+                               self.colors))
         np.random.seed(10101)  # Fixed seed for consistent colors across runs.
         np.random.shuffle(self.colors)  # Shuffle colors to decorrelate adjacent classes.
         np.random.seed(None)  # Reset seed to default.
@@ -106,7 +109,7 @@ class YoloV3:
         if self.classes:
             assert(classId < len(self.classes))
             label = '%s:%s' % (self.classes[classId], label)
-        #Display the label at the top of the bounding box
+        # Display the label at the top of the bounding box
         labelSize, baseLine = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 1, 1)
         top = max(top, labelSize[1])
         cv2.rectangle(frame, (left, top + 3), (left + labelSize[0], top - labelSize[1] - 6), color[classId], -1)
@@ -133,5 +136,3 @@ class YoloV3:
             cv2.putText(frame, label, (0, 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255))
 
         return detection
-
-
