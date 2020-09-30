@@ -27,7 +27,7 @@ class Calculator:
         return self.lastStep
 
     def get_output_index(self, name):
-        return output.index(name)
+        return self.output.index(name)
 
     def get_input_index(self, name):
         return self.input.index(name)
