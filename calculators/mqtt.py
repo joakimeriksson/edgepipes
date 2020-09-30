@@ -3,6 +3,7 @@ from calculators.core import Calculator
 from calculators.image import ImageData
 import paho.mqtt.client as mqtt
 import json
+import cv2
 
 mqttClient = None
 
