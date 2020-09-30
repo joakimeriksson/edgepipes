@@ -21,6 +21,25 @@ from calculators.hand import *
 from google.protobuf import text_format
 import pipeconfig_pb2
 import sched, threading
+import importlib
+
+
+def _resolve_class(class_name):
+    """Return a class instance based on the string representation"""
+    if class_name in globals():
+        return globals()[class_name]
+    class_info = class_name.rsplit('.', 1)
+    if len(class_info) != 2:
+        raise PipelineError(f"Could not resolve class name {class_name}")
+    try:
+        m = importlib.import_module(class_info[0])
+        try:
+            return getattr(m, class_info[1])
+        except AttributeError:
+            raise PipelineError(f"Class {class_name} does not exist")
+    except ImportError:
+        raise PipelineError(f"Could not find module for class {class_name}")
+
 
 def add_stream_input_node(dict, name, node):
     if name not in dict:
@@ -30,6 +49,14 @@ def add_stream_input_node(dict, name, node):
 def merge_options(mapoptions):
     options = {**mapoptions.doubleOptions, **mapoptions.stringOptions}
     return options
+
+
+class PipelineError(Exception):
+    """Exception raised for errors setting up the edge pipeline."""
+
+    def __init__(self, message):
+        super().__init__(message)
+
 
 class Pipeline:
     def __init__(self):
@@ -42,7 +69,8 @@ class Pipeline:
 
     def add_node(self, calculator, prefix, options, input_streams, output_streams):
         print("calculator", calculator)
-        n = globals()[calculator]("Node:" + prefix + ":" + calculator, self.streaming_data, options=options)
+        node_class = _resolve_class(calculator)
+        n = node_class("Node:" + prefix + ":" + calculator, self.streaming_data, options=options)
         n.set_input_names(input_streams)
         n.set_output_names(output_streams)
         for name in input_streams:
