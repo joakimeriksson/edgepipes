@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 #
 # Data pipelines for Edge Computing in Python.
 #

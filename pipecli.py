@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+#
+
 import edgepipes, threading, os
 from cmd import Cmd
 import networkx as nx
