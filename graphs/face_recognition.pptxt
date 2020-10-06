@@ -1,0 +1,22 @@
+# MediaPipe graph that performs face recognition on a live video stream.
+# Images coming into and out of the graph.
+
+input_stream: "input_video"
+output_stream: "output_video"
+
+# Calculate diff on image and only send on when large diff is detected
+
+node: {
+  calculator: "ImageMovementDetector"
+  input_stream: "input_video"
+  output_stream: "motion_detected"
+  map_node_options: {
+    doubleOptions: { key:"threshold"; value:0.01 }
+  }
+}
+
+node: {
+  calculator: "face.face.FaceRecognizer"
+  input_stream: "motion_detected"
+  output_stream: "output_video"
+}

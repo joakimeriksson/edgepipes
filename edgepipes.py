@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 #
 # Data pipelines for Edge Computing in Python.
 #
@@ -24,6 +25,7 @@ from google.protobuf import text_format
 import pipeconfig_pb2
 import sched
 import importlib
+import argparse
 
 
 def _resolve_class(class_name):
@@ -79,14 +81,14 @@ class Pipeline:
         n.set_output_names(output_streams)
         for name in input_streams:
             _add_stream_input_node(self.streaming_data, name, n)
-        self.pipeline = self.pipeline + [n]
+        self.pipeline.append(n)
 
     # Setup a pipeline based on a configuration
     def setup_pipeline(self, config, options=None, prefix=""):
         if options is None:
             options = {}
         pipe = pipeconfig_pb2.CalculatorGraphConfig()
-        c = text_format.Parse(config, pipe)
+        text_format.Parse(config, pipe)
 
         # Should check if this already exists in the config...
         #   map_node_options: { key:"video"; value:"rtsp://192.168.1.237:7447/5c8d2bf990085177ff91c7a2_2" }
@@ -98,12 +100,12 @@ class Pipeline:
         outs.set_input_names([prefix + "output_video"])
         outs.set_output_names([])
         _add_stream_input_node(self.streaming_data, prefix + "output_video", outs)
-        self.pipeline = self.pipeline + [ins]
+        self.pipeline.append(ins)
         for nr, node in enumerate(pipe.node, start=1):
-            options = _merge_options(node.map_node_options)
-            self.add_node(node.calculator, prefix, options, list(map(lambda x: prefix + x, node.input_stream)),
+            node_options = _merge_options(node.map_node_options)
+            self.add_node(node.calculator, prefix, node_options, list(map(lambda x: prefix + x, node.input_stream)),
                           list(map(lambda x: prefix + x, node.output_stream)))
-        self.pipeline = self.pipeline + [outs]
+        self.pipeline.append(outs)
         return self.streaming_data, self.pipeline
 
     def get_node_by_output(self, outputname):
@@ -148,16 +150,29 @@ if __name__ == "__main__":
 
     pipeline = Pipeline()
 
-    if len(sys.argv) == 2:
-        print("Loading pipeline from ", sys.argv[1])
-        with open(sys.argv[1], "r") as f:
-            txt = f.read()
-        s1, p1 = pipeline.setup_pipeline(txt)
-        # s1, p1 = pipeline.setup_pipeline(txt, options={
-        #     'input_video': {'video': "rtsp://192.168.1.237:7447/5c8d2bf990085177ff91c7a2_2"}}, prefix="2/")
-    else:
-        print("*** Missing config file for pipeline.")
-        exit()
+    try:
+        args = sys.argv[1:]
+        p = argparse.ArgumentParser()
+        p.add_argument('--input', dest='input', default=None, help='video stream input')
+        p.add_argument('-n', '--dry-run', dest='dry_run', action='store_true', default=False,
+                       help='test pipeline setup and exit')
+        p.add_argument('pipeline', nargs=1)
+        conopts = p.parse_args(args)
+    except Exception as e:
+        sys.exit(f"Illegal arguments: {e}")
 
-    pipeline.start()
-    pipeline.run()
+    print(f"Loading pipeline from {conopts.pipeline[0]}")
+    try:
+        with open(conopts.pipeline[0], "r") as f:
+            txt = f.read()
+    except FileNotFoundError:
+        sys.exit(f"Could not find the pipeline config file {conopts.pipeline[0]}")
+
+    opts = {}
+    if conopts.input:
+        opts['input_video'] = {'video': conopts.input}
+
+    pipeline.setup_pipeline(txt, options=opts)
+    if not conopts.dry_run:
+        pipeline.start()
+        pipeline.run()

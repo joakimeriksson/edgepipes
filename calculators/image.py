@@ -20,14 +20,18 @@
 #
 import cvutils
 import cv2
+import mss
+import numpy as np
 from datetime import datetime
 from calculators.core import Calculator
 from yolo3.yolo3 import YoloV3
+
 
 class ImageData:
     def __init__(self, image, timestamp):
         self.image = image
         self.timestamp = timestamp
+
 
 class ImageMovementDetector(Calculator):
     def __init__(self, name, s, options=None):
@@ -48,6 +52,7 @@ class ImageMovementDetector(Calculator):
                 return True
         return False
 
+
 class ShowImage(Calculator):
     def process(self):
         image = self.get(0)
@@ -55,7 +60,13 @@ class ShowImage(Calculator):
             cv2.imshow(self.name, image.image)
         return True
 
+
 class CaptureNode(Calculator):
+
+    cap = None
+    screens = None
+    monitor_area = None
+
     def __init__(self, name, s, options=None):
         super().__init__(name, s, options)
         self.output_data = [None]
@@ -63,15 +74,40 @@ class CaptureNode(Calculator):
             self.video = options['video']
         else:
             self.video = 0
-        print("*** Capture from ", self.video)
-        self.cap = cv2.VideoCapture(self.video)
+        if type(self.video) is str and self.video.startswith('screen'):
+            monitor = 1
+            self.screens = mss.mss()
+            # {'left': 0, 'top': -336, 'width': 6800, 'height': 1440}
+            self.monitor_area = self.screens.monitors[monitor]
+            print(f"*** Capture from {self.video} area {self.monitor_area}")
+        else:
+            print("*** Capture from", self.video)
+            self.cap = cv2.VideoCapture(self.video)
 
     def process(self):
-        ret, frame = self.cap.read()
+        if self.cap:
+            _, frame = self.cap.read()
+        elif self.screens:
+            # Get raw pixels from the screen, save it to a Numpy array
+            frame = np.array(self.screens.grab(self.monitor_area))
+            frame = cv2.resize(frame, dsize=(self.monitor_area['width'] // 2, self.monitor_area['height'] // 2),
+                               interpolation=cv2.INTER_CUBIC)
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGRA2BGR)
+        else:
+            return False
         now = datetime.now()
         timestamp = datetime.timestamp(now)
         self.set_output(0, ImageData(frame, timestamp))
         return True
+
+    def close(self):
+        if self.cap:
+            self.cap.release()
+            self.cap = None
+        if self.screens:
+            self.screens.close()
+            self.screens = None
+
 
 class YoloDetector(Calculator):
     def __init__(self, name, s, options=None):
@@ -129,8 +165,6 @@ class SobelEdgesCalculator(Calculator):
             image = self.get(0)
             if isinstance(image, ImageData):
                 img = cv2.GaussianBlur(image.image, (3,3), 0)
-                sobelx = cv2.Sobel(img, cv2.CV_64F, 1, 0, ksize = 5)
+                sobelx = cv2.Sobel(img, cv2.CV_64F, 1, 0, ksize=5)
                 self.set_output(0, ImageData(sobelx, image.timestamp))
             return True
-
-            

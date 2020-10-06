@@ -19,6 +19,7 @@ Keras-Preprocessing==1.1.2
 kiwisolver==1.2.0
 Markdown==3.2.2
 matplotlib==3.3.2
+mss==6.0.0
 multidict==4.7.6
 networkx==2.5
 numpy==1.18.5
