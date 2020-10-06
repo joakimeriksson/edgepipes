@@ -41,7 +41,7 @@ Create virtual environment for edgepipes.
 > pip3 install -r requirements.txt
 ```
 
-Some examples have additional requirements. To run the face detection example:
+Some examples have additional requirements. To run the face recognition example:
 ```
 > pip3 install -r face/requiements.txt
 ```
@@ -76,7 +76,7 @@ Edge detection
 ```
 > ./edgepipes.py graphs/edge_detection.pbtxt
 ```
-Yolov 3 detector
+Yolo 3 detector
 ```
 > ./edgepipes.py graphs/yolov3detector.pbtxt
 ```
