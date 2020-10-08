@@ -16,11 +16,17 @@ def on_message(client, userdata, msg):
 def mqtt_connect_client():
     global mqttClient
     if mqttClient is None or not mqttClient.is_connected():
-        mqttClient = mqtt.Client()
-        mqttClient.on_connect = on_connect
-        mqttClient.on_message = on_message
-        mqttClient.connect("localhost", 1883, 60)
-        mqttClient.loop_start()
+        if not mqttClient:
+            mqttClient = mqtt.Client()
+            mqttClient.on_connect = on_connect
+            mqttClient.on_message = on_message
+        try:
+            mqttClient.connect("localhost", 1883, 60)
+            mqttClient.loop_start()
+        except Exception as e:
+            print("MQTT ERROR: failed to connect to broker:", e)
+            return False
+    return True
 
 class MQTTPublishCalculator(Calculator):
     def __init__(self, name, s, options):
@@ -44,8 +50,7 @@ class MQTTPublishCalculator(Calculator):
 class MQTTPublishYoloClass(MQTTPublishCalculator):
     def process(self):
         data = self.get(0)
-        if data is not None:
-            mqtt_connect_client()
+        if data is not None and mqtt_connect_client():
             if len(self.output) > 0:
                 def_topic = self.output[0]
             else:
