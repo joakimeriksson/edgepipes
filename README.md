@@ -27,7 +27,7 @@ It is highly recommended to use Python virtual environments to enable separated 
 ```
 Some systems might require extra installation steps. Please search online for instructions for your operating system.
 
-Create virtual environment for edgepipes.
+Create virtual environment for Edgepipes.
 
 ```
 > mkvirtualenv edgepipes -p python3
@@ -43,7 +43,7 @@ Create virtual environment for edgepipes.
 
 Some examples have additional requirements. To run the face recognition example:
 ```
-> pip3 install -r face/requiements.txt
+> pip3 install -r face/requirements.txt
 ```
 
 ## Run Edgepipes
@@ -89,8 +89,13 @@ Face recognition - more images of "known" people can be added in the directory `
 > ./edgepipes.py graphs/face_recognition.pptxt
 ```
 
+Yolo 3 detector publishing detections via MQTT. This example requires a running MQTT broker in local computer.
+```
+> ./edgepipes.py graphs/yolov3detector_mqtt.pbtxt
+```
+
 ## Interactive CLI Version
-Another option to start datapipes is to run it from an interactive cli.
+Another option to start Edgepipes is to run it from an interactive CLI.
 ```
 > ./pipecli.py
 ```
