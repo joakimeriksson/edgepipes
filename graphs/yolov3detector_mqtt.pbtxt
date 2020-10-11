@@ -30,3 +30,12 @@ node: {
   input_stream: "yolo_detections"
   output_stream: "output_video"
 }
+
+# Send MQTT detection message
+node: {
+    calculator: "MQTTPublishYoloClass"
+    input_stream: "yolo_detections"
+    map_node_options: {
+    stringOptions: { key:"topic"; value:"ha/tts/say" }
+  }
+}
