@@ -78,13 +78,11 @@ class SpectrogramCalculator(Calculator):
 
         audio = self.get(0)
         if isinstance(audio, AudioData):
-            print("Got ", len(audio.audio), "samples.")
             hop_length = 256 # number of samples per time-step in spectrogram
             n_mels = 128 # number of bins in spectrogram. Height of image
             time_steps = 384 # number of time-steps. Width of image
             start_sample = 0 # starting at beginning
             length_samples = time_steps*hop_length
-
 
             sr = 16000
             y = numpy.fromstring(audio.audio, numpy.int16) / 32768.0
@@ -92,7 +90,7 @@ class SpectrogramCalculator(Calculator):
                 self.audio = y
             else:
                 self.audio = numpy.append(self.audio, y)
-            print(y)
+
             if (len(self.audio) > length_samples):
                 self.audio = self.audio[len(self.audio) - length_samples:]
             y = self.audio
@@ -115,12 +113,10 @@ class VoskVoiceToTextCalculator(Calculator):
         import vosk
         audio = self.get(0)
         if isinstance(audio, AudioData):
-            print("Got ", len(audio.audio), "samples.")
             if self.rec.AcceptWaveform(audio.audio):
-                print(self.rec.Result())
+                print("Voice2Text:", self.rec.Result())
                 self.set_output(0, self.rec.Result())
             else:
-                print(self.rec.PartialResult())
+                print("Voice2Text:", self.rec.PartialResult())
             return True
         return False
-
