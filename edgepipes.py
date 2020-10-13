@@ -21,6 +21,7 @@ import time
 from calculators.image import *
 from calculators.mqtt import *
 from calculators.hand import *
+from calculators.audio import *
 from google.protobuf import text_format
 import pipeconfig_pb2
 import sched
@@ -90,22 +91,36 @@ class Pipeline:
         pipe = pipeconfig_pb2.CalculatorGraphConfig()
         text_format.Parse(config, pipe)
 
+        print("Pipe-config:")
+        print(pipe)
+        print("Inputs:", pipe.input_stream)
+        print("Outputs:", pipe.output_stream)
+
         # Should check if this already exists in the config...
         #   map_node_options: { key:"video"; value:"rtsp://192.168.1.237:7447/5c8d2bf990085177ff91c7a2_2" }
-        ins = CaptureNode(prefix + "input_video", self.streaming_data, options=options.get('input_video', {}))
-        ins.set_input_names([])
-        ins.set_output_names([prefix + "input_video"])
+        if "input_video" in pipe.input_stream:
+            ins = CaptureNode(prefix + "input_video", self.streaming_data, options=options.get('input_video', {}))
+            ins.set_input_names([])
+            ins.set_output_names([prefix + "input_video"])
+            self.pipeline.append(ins)
 
-        outs = ShowImage(prefix + "output_video", self.streaming_data)
-        outs.set_input_names([prefix + "output_video"])
-        outs.set_output_names([])
-        _add_stream_input_node(self.streaming_data, prefix + "output_video", outs)
-        self.pipeline.append(ins)
+        if "input_audio" in pipe.input_stream:
+            ins = AudioCaptureNode(prefix + "input_audio", self.streaming_data, options=options.get('input_audio', {}))
+            ins.set_input_names([])
+            ins.set_output_names([prefix + "input_audio"])
+            self.pipeline.append(ins)
+
+        if "output_video" in pipe.output_stream:
+            outs = ShowImage(prefix + "output_video", self.streaming_data)
+            outs.set_input_names([prefix + "output_video"])
+            outs.set_output_names([])
+            _add_stream_input_node(self.streaming_data, prefix + "output_video", outs)
+            self.pipeline.append(outs)
+
         for nr, node in enumerate(pipe.node, start=1):
             node_options = _merge_options(node.map_node_options)
             self.add_node(node.calculator, prefix, node_options, list(map(lambda x: prefix + x, node.input_stream)),
                           list(map(lambda x: prefix + x, node.output_stream)))
-        self.pipeline.append(outs)
         return self.streaming_data, self.pipeline
 
     def get_node_by_output(self, outputname):
