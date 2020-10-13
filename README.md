@@ -102,6 +102,10 @@ Another option to start Edgepipes is to run it from an interactive CLI.
 
 This will allow you to play with loading pipeline, starting stopping and printing the pipeline. Future features will be to add and remove parts of the pipeline at runtime, run at different speeds, debug, etc.
 
+## Note that the Audio examples with voice to text will require a model downloaded!
+Download the model from https://alphacephei.com/vosk/models and unpack as 'model' in the current folder where edgepipes are run.
+
+
 ## Future features and ideas
 * Add a way to distribute the pipeline processing over multiple threads and machines.
 * Add a way to send messages over MQTT instead of passing results internally in Python.
