@@ -43,13 +43,13 @@ class Calculator:
         print("Setting output:" + self.output[index])
         if self.output[index] not in self.streams:
             print("  - No subscriber...")
-            return
-        # Set this in all "subscribers"
-        subs = self.streams[self.output[index]]
-        for sub in subs:
-            # 0 => node, 1 => index
-            print("### Setting input in " + sub[0].name + " index:", sub[1])
-            sub[0].set_input(sub[1], data)
+        else:
+            # Set this in all "subscribers"
+            subs = self.streams[self.output[index]]
+            for sub in subs:
+                # 0 => node, 1 => index
+                print("### Setting input in " + sub[0].name + " index:", sub[1])
+                sub[0].set_input(sub[1], data)
         # the cache
         self.output_data[index] = data
 
