@@ -15,3 +15,8 @@ node: {
   output_stream: "output_video"
 }
 
+node: {
+  calculator: "VoskVoiceToTextCalculator"
+  input_stream: "input_audio"
+  output_stream: "voice_to_text"
+}

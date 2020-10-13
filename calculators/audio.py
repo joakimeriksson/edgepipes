@@ -99,3 +99,26 @@ class SpectrogramCalculator(Calculator):
             self.set_output(0, ImageData(img, audio.timestamp))
             return True
         return False
+
+class VoskVoiceToTextCalculator(Calculator):
+
+    def __init__(self, name, s, options=None):
+        from vosk import Model, KaldiRecognizer
+        super().__init__(name, s, options)
+        self.model = Model("model")
+        self.rec = KaldiRecognizer(self.model, 16000)
+        self.output_data = [None]
+
+    def process(self):
+        import vosk
+        audio = self.get(0)
+        print("Got ", len(audio.audio), "samples.")
+        if isinstance(audio, AudioData):
+            if self.rec.AcceptWaveform(audio.audio):
+                print(self.rec.Result())
+                self.set_output(0, self.rec.Result())
+            else:
+                print(self.rec.PartialResult())
+            return True
+        return False
+
