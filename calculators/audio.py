@@ -21,18 +21,20 @@ class AudioCaptureNode(Calculator):
             self.audio = 0
         print("*** Capture from ", self.audio)
         self.paud = pyaudio.PyAudio()
-        self.cap = self.paud.open(format=pyaudio.paInt16, channels=1, rate=16000, input=True, frames_per_buffer=8000)
-        self.cap.start_stream()
 
     def process(self):
-        if self.cap:
-            data = self.cap.read(4000)
+        if self.cap is not None:
+            data = self.cap.read(8000)
         else:
-            return False
-        now = datetime.now()
-        timestamp = datetime.timestamp(now)
-        self.set_output(0, AudioData(data, timestamp))
-        return True
+            self.cap = self.paud.open(format=pyaudio.paInt16, channels=1, rate=16000, input=True, frames_per_buffer=8000)
+            self.cap.start_stream()
+            data = None
+        if data is not None:
+            now = datetime.now()
+            timestamp = datetime.timestamp(now)
+            self.set_output(0, AudioData(data, timestamp))
+            return True
+        return False
 
     def close(self):
         if self.cap:
@@ -75,8 +77,8 @@ class SpectrogramCalculator(Calculator):
         from calculators.image import ImageData
 
         audio = self.get(0)
-        print("Got ", len(audio.audio), "samples.")
         if isinstance(audio, AudioData):
+            print("Got ", len(audio.audio), "samples.")
             hop_length = 256 # number of samples per time-step in spectrogram
             n_mels = 128 # number of bins in spectrogram. Height of image
             time_steps = 384 # number of time-steps. Width of image
@@ -112,8 +114,8 @@ class VoskVoiceToTextCalculator(Calculator):
     def process(self):
         import vosk
         audio = self.get(0)
-        print("Got ", len(audio.audio), "samples.")
         if isinstance(audio, AudioData):
+            print("Got ", len(audio.audio), "samples.")
             if self.rec.AcceptWaveform(audio.audio):
                 print(self.rec.Result())
                 self.set_output(0, self.rec.Result())
