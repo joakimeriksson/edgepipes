@@ -124,14 +124,19 @@ class ShowStatusImageFromFiles(Calculator):
                 self.set_status(False)
             else:
                 print("Illegal auto open value:", auto_open)
+        self.output_data = [None]
 
     def set_status(self, status):
         self._current_status = status
+        now = datetime.now()
+        timestamp = datetime.timestamp(now)
         if status:
             self._last_on_time = time.time()
             cv2.imshow(self._window_title, self.onImage)
+            self.set_output(0, ImageData(self.onImage, timestamp))
         else:
             cv2.imshow(self._window_title, self.offImage)
+            self.set_output(0, ImageData(self.offImage, timestamp))
 
     def process(self):
         data = self.get(0)
