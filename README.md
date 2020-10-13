@@ -4,13 +4,27 @@ Experimental pipeline processing for Python. Intended for developing basic AI or
 
 ## Installing prerequisites
 
-You need Python 3 and Package Installer for Python (PIP).
+You need Python 3, Package Installer for Python (PIP) and PyAudio.
 
 ### Linux
 
 ```
 > sudo apt update
 > sudo apt install python3 python3-pip
+> sudo apt install python3-pyaudio
+```
+
+### OSX with Homebrew
+
+```
+> # If xcode not installed before (needed for portaudio)
+> xcode-select --install
+
+> # If Python 3 not already installed
+> brew install python@3.8
+
+> brew install portaudio
+> pip3 install pyaudio
 ```
 
 ### Other operating systems
