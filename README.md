@@ -4,7 +4,7 @@ Experimental pipeline processing for Python. Intended for developing basic AI or
 
 ## Installing prerequisites
 
-You need Python 3, Package Installer for Python (PIP) and PyAudio.
+You need Python 3, Package Installer for Python (PIP), PyAudio and OpenCV.
 
 ### Linux
 
@@ -12,6 +12,8 @@ You need Python 3, Package Installer for Python (PIP) and PyAudio.
 > sudo apt update
 > sudo apt install python3 python3-pip
 > sudo apt install python3-pyaudio
+> # Some system have OpenCV pre-installed or might require manual installation
+> sudo apt install python3-opencv
 ```
 
 ### OSX with Homebrew
@@ -25,6 +27,8 @@ You need Python 3, Package Installer for Python (PIP) and PyAudio.
 
 > brew install portaudio
 > pip3 install pyaudio
+> brew install opencv
+> pip3 install opencv-python
 ```
 
 ### Other operating systems
