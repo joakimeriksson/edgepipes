@@ -15,6 +15,7 @@ class AudioCaptureNode(Calculator):
     def __init__(self, name, s, options=None):
         super().__init__(name, s, options)
         self.output_data = [None]
+        self.output_buffers = []
         if options is not None and 'audio' in options:
             self.audio = options['audio']
         else:
@@ -22,17 +23,25 @@ class AudioCaptureNode(Calculator):
         print("*** Capture from ", self.audio)
         self.paud = pyaudio.PyAudio()
 
+    def callback(self, in_data, frame_count, time_info, status):
+        now = datetime.now()
+        timestamp = datetime.timestamp(now)
+        print("Got callback")
+        self.output_buffers += [AudioData(in_data, timestamp)]
+        return (in_data, pyaudio.paContinue)
+
+
     def process(self):
-        if self.cap is not None:
-            data = self.cap.read(8000)
-        else:
-            self.cap = self.paud.open(format=pyaudio.paInt16, channels=1, rate=16000, input=True, frames_per_buffer=8000)
+        data = None
+        if len(self.output_buffers) > 0:
+            data = self.output_buffers.pop(0)
+            if len(self.output_buffers) > 0:
+                print("Warning - more audio left in buffer: ", len(self.output_buffers))
+        elif self.cap is None:
+            self.cap = self.paud.open(format=pyaudio.paInt16, channels=1, rate=16000, input=True, frames_per_buffer=8000, stream_callback=self.callback)
             self.cap.start_stream()
-            data = None
         if data is not None:
-            now = datetime.now()
-            timestamp = datetime.timestamp(now)
-            self.set_output(0, AudioData(data, timestamp))
+            self.set_output(0, data)
             return True
         return False
 
