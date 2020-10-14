@@ -35,12 +35,17 @@ class PipeCli(Cmd):
         self.camera = inp
 
     def do_print(self, inp):
+        for n in self.pipeline.pipeline:
+            print("N:", n.name)
+            print("  Time consumed:", self.pipeline.elapsed[n.name], self.pipeline.elapsed[n.name] / self.pipeline.count[n.name] )
+            print("  input :", n.input)
+            print("  output:", n.output)
+        print("Done...")
+
+    def do_plot(self, inp):
         g = nx.Graph()
         labels = dict()
         for n in self.pipeline.pipeline:
-            print("N:", n.name)
-            print("  input :", n.input)
-            print("  output:", n.output)
             g.add_node(n.name)
             # Add input edges
             for ni in n.input:
@@ -49,8 +54,6 @@ class PipeCli(Cmd):
                     g.add_edge(n.name, nodes[0].name)
                     labels[(n.name,nodes[0].name)] = ni
         self.pipeline.scheduler.enter(1, 1, plot, argument=(g,labels,))
-        print("Done...")
-
 
     def emptyline(self):
         return

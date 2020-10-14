@@ -73,6 +73,8 @@ class Pipeline:
         self.do_exit = False
         self.run_pipeline = False
         self.run_step = 0
+        self.elapsed = {}
+        self.count = {}
 
     def add_node(self, calculator, prefix, options, input_streams, output_streams):
         print("calculator", calculator)
@@ -121,6 +123,10 @@ class Pipeline:
             node_options = _merge_options(node.map_node_options)
             self.add_node(node.calculator, prefix, node_options, list(map(lambda x: prefix + x, node.input_stream)),
                           list(map(lambda x: prefix + x, node.output_stream)))
+
+        for node in self.pipeline:
+            self.elapsed[node.name] = 0
+            self.count[node.name] = 0
         return self.streaming_data, self.pipeline
 
     def get_node_by_output(self, outputname):
@@ -132,7 +138,12 @@ class Pipeline:
             if self.run_pipeline or self.run_step > 0:
                 # Just process all nodes - they will produce output and process the input.
                 for node in self.pipeline:
-                    node.process_node()
+                    t0= time.time()
+                    # Count elapsed time when processed!
+                    if node.process_node():
+                        t1 = time.time() - t0
+                        self.elapsed[node.name] += t1
+                        self.count[node.name] += 1
                 time.sleep(0.001)
                 self.run_step -= 1
             else:
