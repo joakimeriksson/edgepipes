@@ -71,7 +71,7 @@ class CaptureNode(Calculator):
         super().__init__(name, s, options)
         self.output_data = [None]
         if options is not None and 'video' in options:
-            self.video = options['video']
+            self.video = int(options['video']) if options['video'].isnumeric() else options['video']
         else:
             self.video = 0
         if type(self.video) is str and self.video.startswith('screen'):
