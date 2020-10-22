@@ -35,10 +35,10 @@ class ImageData:
 
 class ImageMovementDetector(Calculator):
     def __init__(self, name, s, options=None):
-        super().__init__(name, s)
+        super().__init__(name, s, options)
         self.avg = cvutils.DiffFilter()
         self.threshold = 0.01
-        if 'threshold' in options:
+        if options and 'threshold' in options:
             self.threshold = options['threshold']
 
     def process(self):
@@ -56,7 +56,7 @@ class ImageMovementDetector(Calculator):
 class ShowImage(Calculator):
     def process(self):
         image = self.get(0)
-        if image is not None:
+        if isinstance(image, ImageData):
             cv2.imshow(self.name, image.image)
         return True
 
@@ -94,17 +94,30 @@ class CaptureNode(Calculator):
     def __init__(self, name, s, options=None):
         super().__init__(name, s, options)
         self.output_data = [None]
-        if options is not None and 'video' in options:
-            self.video = int(options['video']) if options['video'].isnumeric() else options['video']
-        else:
-            self.video = 0
-        if type(self.video) is str and self.video.startswith('screen'):
-            monitor = 1
-            self.screens = mss.mss()
-            # {'left': 0, 'top': -336, 'width': 6800, 'height': 1440}
-            self.monitor_area = self.screens.monitors[monitor]
-            print(f"*** Capture from {self.video} area {self.monitor_area}")
-        else:
+        self.video = options['video'] if options and 'video' in options else 0
+        if type(self.video) is str:
+            if self.video.startswith('screen'):
+                monitor = 1
+                self.screens = mss.mss()
+                # {'left': 0, 'top': -336, 'width': 6800, 'height': 1440}
+                self.monitor_area = self.screens.monitors[monitor]
+                print(f"*** Capture from {self.video} area {self.monitor_area}")
+            elif self.video.startswith("rpicam"):
+                cw, ch = 1280, 720
+                dw, dh = 1280, 720
+                fps = 60
+                flip = 2
+                self.video = ('nvarguscamerasrc ! '
+                              'video/x-raw(memory:NVMM), width=%d, height=%d, format=NV12, framerate=%d/1 ! '
+                              'nvvidconv flip-method=%d ! '
+                              'video/x-raw, width=%d, height=%d, format=BGRx ! '
+                              'videoconvert ! '
+                              'video/x-raw, format=BGR ! appsink' %
+                              (cw, ch, fps, flip, dw, dh)
+                              )
+            elif self.video.isnumeric():
+                self.video = int(self.video)
+        if not self.screens:
             print("*** Capture from", self.video)
             self.cap = cv2.VideoCapture(self.video)
 
@@ -135,7 +148,7 @@ class CaptureNode(Calculator):
 
 class YoloDetector(Calculator):
     def __init__(self, name, s, options=None):
-        super().__init__(name, s)
+        super().__init__(name, s, options)
         self.input_data = [None]
         self.yolo = YoloV3(0.5, 0.4)
 
@@ -150,9 +163,10 @@ class YoloDetector(Calculator):
                 return True
         return False
 
+
 class DrawDetections(Calculator):
     def __init__(self, name, s, options=None):
-        super().__init__(name, s)
+        super().__init__(name, s, options)
         self.input_data = [None, None]
 
     def process(self):
@@ -166,6 +180,7 @@ class DrawDetections(Calculator):
                 return True
         return False
 
+
 class LuminanceCalculator(Calculator):
     def __init__(self, name, s, options=None):
         super().__init__(name, s, options)
@@ -178,6 +193,7 @@ class LuminanceCalculator(Calculator):
                 gray = cv2.cvtColor(image.image, cv2.COLOR_BGR2GRAY)
                 self.set_output(0, ImageData(gray, image.timestamp))
             return True
+
 
 class SobelEdgesCalculator(Calculator):
     def __init__(self, name, s, options=None):
