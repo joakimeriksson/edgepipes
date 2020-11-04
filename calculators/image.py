@@ -60,6 +60,30 @@ class ShowImage(Calculator):
             cv2.imshow(self.name, image.image)
         return True
 
+class ShowStatusImageFromFiles(Calculator):
+    def __init__(self, name, s, options=None):
+        super().__init__(name, s, options)
+        self.output_data = [None]
+        if options is not None and 'onImage' in options:
+            im_name = options['onImage']
+            self.onImage = cv2.imread(im_name)
+        if options is not None and 'offImage' in options:
+            im_name = options['offImage']
+            self.offImage = cv2.imread(im_name)
+        self.onWord = "on"
+        if options is not None and 'onWord' in options:
+            self.onWord = options['onWord']
+
+    def process(self):
+        data = self.get(0)
+        if data is not None:
+            # Assuming string!
+            print("Data:", data)
+            if self.onWord in data:
+                cv2.imshow("Status", self.onImage)
+            else:
+                cv2.imshow("Status", self.offImage)
+        return True
 
 class CaptureNode(Calculator):
 

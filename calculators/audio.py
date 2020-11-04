@@ -116,16 +116,19 @@ class VoskVoiceToTextCalculator(Calculator):
         super().__init__(name, s, options)
         self.model = Model("model")
         self.rec = KaldiRecognizer(self.model, 16000)
-        self.output_data = [None]
+        self.output_data = [None, None]
 
     def process(self):
         import vosk
         audio = self.get(0)
         if isinstance(audio, AudioData):
             if self.rec.AcceptWaveform(audio.audio):
-                print("Voice2Text:", self.rec.Result())
-                self.set_output(0, self.rec.Result())
+                res = self.rec.Result()
+                print("Voice2Text:", res)
+                self.set_output(0, res)
             else:
-                print("Voice2Text:", self.rec.PartialResult())
+                res = self.rec.PartialResult()
+                print("Voice2Word:", res)
+                self.set_output(1, res)
             return True
         return False
