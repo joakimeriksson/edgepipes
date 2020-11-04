@@ -94,16 +94,31 @@ class ShowImage(Calculator):
 class ShowStatusImageFromFiles(Calculator):
     def __init__(self, name, s, options=None):
         super().__init__(name, s, options)
+        if options is None:
+            options = {}
         self.output_data = [None]
-        if options is not None and 'onImage' in options:
+        if 'onImage' in options:
             im_name = options['onImage']
             self.onImage = cv2.imread(im_name)
-        if options is not None and 'offImage' in options:
+        if 'offImage' in options:
             im_name = options['offImage']
             self.offImage = cv2.imread(im_name)
         self.onWord = 'on'
-        if options is not None and 'onWord' in options:
+        if 'onWord' in options:
             self.onWord = options['onWord']
+        self.offWord = None
+        if 'offWord' in options:
+            self.offWord = options['offWord']
+        if 'offWord' in options:
+            self.offWord = options['offWord']
+        if 'autoOpen' in options:
+            auto_open = options['autoOpen']
+            if auto_open == 'on':
+                cv2.imshow("Status", self.onImage)
+            elif auto_open == 'off':
+                cv2.imshow("Status", self.offImage)
+            else:
+                print("Illegal auto open value:", auto_open)
 
     def process(self):
         data = self.get(0)
@@ -111,7 +126,7 @@ class ShowStatusImageFromFiles(Calculator):
             if self.onWord in data.text:
                 print(f"Status ON  ({data.text})")
                 cv2.imshow("Status", self.onImage)
-            else:
+            elif self.offWord is None or self.offWord in data.text:
                 print(f"Status OFF ({data.text})")
                 cv2.imshow("Status", self.offImage)
         return True
