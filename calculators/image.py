@@ -34,20 +34,50 @@ class ImageData:
 
 
 class ImageMovementDetector(Calculator):
+
+    _last_image_ts = 0
+    threshold = 0.01
+    min_fps = 1.0
+    max_fps = 0.5
+    publish_by_fps = 0
+    publish_by_motion = 0
+    drop_by_fps_counter = 0
+
     def __init__(self, name, s, options=None):
         super().__init__(name, s, options)
         self.avg = cvutils.DiffFilter()
-        self.threshold = 0.01
-        if options and 'threshold' in options:
-            self.threshold = options['threshold']
+        if options:
+            if 'threshold' in options:
+                self.threshold = float(options['threshold'])
+            if 'min_fps' in options:
+                self.min_fps = float(options['min_fps'])
+            if 'max_fps' in options:
+                self.max_fps = float(options['max_fps'])
 
     def process(self):
         image = self.get(0)
-        print(image)
         if isinstance(image, ImageData):
-            value = self.avg.calculate_diff(image.image)
-            if value > self.threshold:
-                print(" *** Trigger motion!!! => output set!")
+            publish = False
+            if self._last_image_ts == 0:
+                # First image - always update weights and publish
+                self.avg.calculate_diff(image.image)
+                publish = True
+            else:
+                if self.max_fps > 0 and 1.0 / self.max_fps > image.timestamp - self._last_image_ts:
+                    # Image too soon after previous. Drop this frame
+                    self.drop_by_fps_counter += 1
+                    return False
+                if self.min_fps > 0 and 1.0 / self.min_fps < image.timestamp - self._last_image_ts:
+                    publish = True
+                    self.publish_by_fps += 1
+                if not publish:
+                    value = self.avg.calculate_diff(image.image)
+                    if value > self.threshold:
+                        publish = True
+                        print(" *** Trigger motion!!! => output set!")
+                        self.publish_by_motion += 1
+            if publish:
+                self._last_image_ts = image.timestamp
                 self.set_output(0, image)
                 return True
         return False
@@ -107,7 +137,7 @@ class CaptureNode(Calculator):
             elif self.video.startswith("rpicam"):
                 cw, ch = 1280, 720
                 dw, dh = 1280, 720
-                fps = 60
+                fps = 8
                 flip = 2
                 self.video = ('nvarguscamerasrc ! '
                               'video/x-raw(memory:NVMM), width=%d, height=%d, format=NV12, framerate=%d/1 ! '
