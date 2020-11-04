@@ -22,6 +22,7 @@ import cvutils
 import cv2
 import mss
 import numpy as np
+import time
 from datetime import datetime
 from calculators.core import Calculator, TextData
 from yolo3.yolo3 import YoloV3
@@ -92,6 +93,11 @@ class ShowImage(Calculator):
 
 
 class ShowStatusImageFromFiles(Calculator):
+
+    status_on_time = 0
+    _current_status = False
+    _last_on_time = 0
+
     def __init__(self, name, s, options=None):
         super().__init__(name, s, options)
         if options is None:
@@ -111,24 +117,39 @@ class ShowStatusImageFromFiles(Calculator):
             self.offWord = options['offWord']
         if 'offWord' in options:
             self.offWord = options['offWord']
+        if 'statusOnTime' in options:
+            self.status_on_time = options['statusOnTime']
         if 'autoOpen' in options:
             auto_open = options['autoOpen']
             if auto_open == 'on':
-                cv2.imshow("Status", self.onImage)
+                self.set_status(True)
             elif auto_open == 'off':
-                cv2.imshow("Status", self.offImage)
+                self.set_status(False)
             else:
                 print("Illegal auto open value:", auto_open)
+
+    def set_status(self, status):
+        self._current_status = status
+        if status:
+            self._last_on_time = time.time()
+            cv2.imshow("Status", self.onImage)
+        else:
+            cv2.imshow("Status", self.offImage)
 
     def process(self):
         data = self.get(0)
         if isinstance(data, TextData):
             if self.onWord in data.text:
-                print(f"Status ON  ({data.text})")
-                cv2.imshow("Status", self.onImage)
-            elif self.offWord is None or self.offWord in data.text:
-                print(f"Status OFF ({data.text})")
-                cv2.imshow("Status", self.offImage)
+                if not self._current_status:
+                    print(f"Status ON  ({data.text})")
+                self.set_status(True)
+            elif (not self.offWord and self.status_on_time == 0) or (self.offWord and self.offWord in data.text):
+                if self._current_status:
+                    print(f"Status OFF ({data.text})")
+                self.set_status(False)
+        if self._current_status and self.status_on_time > 0 and self._last_on_time + self.status_on_time <= time.time():
+            print("Status OFF by timeout")
+            self.set_status(False)
         return True
 
 
@@ -251,7 +272,7 @@ class SobelEdgesCalculator(Calculator):
         if self.input_data[0] is not None:
             image = self.get(0)
             if isinstance(image, ImageData):
-                img = cv2.GaussianBlur(image.image, (3,3), 0)
+                img = cv2.GaussianBlur(image.image, (3, 3), 0)
                 sobelx = cv2.Sobel(img, cv2.CV_64F, 1, 0, ksize=5)
                 self.set_output(0, ImageData(sobelx, image.timestamp))
             return True
