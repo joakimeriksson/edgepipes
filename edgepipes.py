@@ -179,7 +179,8 @@ if __name__ == "__main__":
     try:
         args = sys.argv[1:]
         p = argparse.ArgumentParser()
-        p.add_argument('--input', dest='input', default=None, help='video stream input')
+        p.add_argument('--input', dest='input_video', default=None, help='video stream input')
+        p.add_argument('--input_audio', dest='input_audio', default=None, help='audio stream input')
         p.add_argument('-n', '--dry-run', dest='dry_run', action='store_true', default=False,
                        help='test pipeline setup and exit')
         p.add_argument('pipeline', nargs=1)
@@ -195,8 +196,14 @@ if __name__ == "__main__":
         sys.exit(f"Could not find the pipeline config file {conopts.pipeline[0]}")
 
     opts = {}
-    if conopts.input:
-        opts['input_video'] = {'video': conopts.input}
+    if conopts.input_video:
+        if conopts.input_video.isnumeric():
+            conopts.input_video = int(conopts.input_video)
+        opts['input_video'] = {'video': conopts.input_video}
+    if conopts.input_audio:
+        if conopts.input_audio.isnumeric():
+            conopts.input_audio = int(conopts.input_audio)
+        opts['input_audio'] = {'audio': conopts.input_audio}
 
     pipeline.setup_pipeline(txt, options=opts)
     if not conopts.dry_run:

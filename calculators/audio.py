@@ -24,6 +24,7 @@ class AudioCaptureNode(Calculator):
 
     cap = None
     paud = None
+    audio = None
 
     def __init__(self, name, s, options=None):
         super().__init__(name, s, options)
@@ -31,8 +32,6 @@ class AudioCaptureNode(Calculator):
         self.output_queue = Queue(maxsize=16)
         if options is not None and 'audio' in options:
             self.audio = options['audio']
-        else:
-            self.audio = 0
         print("*** Capture from ", self.audio)
         self.paud = pyaudio.PyAudio()
 
@@ -53,7 +52,13 @@ class AudioCaptureNode(Calculator):
             self.set_output(0, data)
             return True
         if self.cap is None:
-            self.cap = self.paud.open(format=pyaudio.paInt16, channels=1, rate=16000, input=True, frames_per_buffer=8000, stream_callback=self._callback)
+            if self.audio is not None:
+                self.cap = self.paud.open(format=pyaudio.paInt16, channels=1, rate=16000, input=True,
+                                          input_device_index=self.audio, frames_per_buffer=8000,
+                                          stream_callback=self._callback)
+            else:
+                self.cap = self.paud.open(format=pyaudio.paInt16, channels=1, rate=16000, input=True,
+                                          frames_per_buffer=8000, stream_callback=self._callback)
             self.cap.start_stream()
         return False
 
