@@ -8,6 +8,12 @@
 # But can also be via a "bus" or other communication mechanism
 # 
 
+class TextData:
+    def __init__(self, text, timestamp):
+        self.text = text
+        self.timestamp = timestamp
+
+
 class Calculator:
     def __init__(self, name, streams, options=None):
         self.name = name
@@ -40,7 +46,7 @@ class Calculator:
 
     def set_output(self, index, data):
         if self.output[index] not in self.streams:
-            print("  - No subscriber...")
+            print(f"  - No subscriber of {self.name}...")
         else:
             # Set this in all "subscribers"
             subs = self.streams[self.output[index]]
