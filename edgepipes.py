@@ -207,13 +207,11 @@ if __name__ == "__main__":
 
     opts = {}
     if conopts.input_video:
-        if conopts.input_video.isnumeric():
-            conopts.input_video = int(conopts.input_video)
-        opts['input_video'] = {'video': conopts.input_video}
+        video = int(conopts.input_video) if conopts.input_video.isnumeric() else conopts.input_video
+        opts['input_video'] = {'video': video}
     if conopts.input_audio:
-        if conopts.input_audio.isnumeric():
-            conopts.input_audio = int(conopts.input_audio)
-        opts['input_audio'] = {'audio': conopts.input_audio}
+        audio = int(conopts.input_audio) if conopts.input_audio.isnumeric() else conopts.input_audio
+        opts['input_audio'] = {'audio': audio}
 
     pipeline.setup_pipeline(txt, options=opts)
     if not conopts.dry_run:
