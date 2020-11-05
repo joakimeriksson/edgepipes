@@ -22,6 +22,7 @@ from calculators.image import *
 from calculators.mqtt import *
 from calculators.hand import *
 from calculators.audio import *
+from calculators.core import SwitchNode
 from google.protobuf import text_format
 import pipeconfig_pb2
 import sched
@@ -86,6 +87,15 @@ class Pipeline:
             _add_stream_input_node(self.streaming_data, name, n)
         self.pipeline.append(n)
 
+    def get_node_by_name(self, name):
+        return next((n for n in self.pipeline if n.name == name), None)
+
+    def get_nodes_by_type(self, node_class):
+        return [n for n in self.pipeline if isinstance(n, node_class)]
+
+    def get_nodes(self):
+        return list(self.pipeline)
+
     # Setup a pipeline based on a configuration
     def setup_pipeline(self, config, options=None, prefix=""):
         if options is None:
@@ -138,7 +148,7 @@ class Pipeline:
             if self.run_pipeline or self.run_step > 0:
                 # Just process all nodes - they will produce output and process the input.
                 for node in self.pipeline:
-                    t0= time.time()
+                    t0 = time.time()
                     # Count elapsed time when processed!
                     if node.process_node():
                         t1 = time.time() - t0

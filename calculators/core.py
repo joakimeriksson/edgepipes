@@ -32,6 +32,12 @@ class Calculator:
         self.lastStep = self.process()
         return self.lastStep
 
+    def get_output_count(self):
+        return len(self.output)
+
+    def get_input_count(self):
+        return len(self.input)
+
     def get_output_index(self, name):
         return self.output.index(name)
 
@@ -46,7 +52,7 @@ class Calculator:
 
     def set_output(self, index, data):
         if self.output[index] not in self.streams:
-            print(f"  - No subscriber of {self.name}...")
+            print(f"  - No subscriber of {self.output[index]}...")
         else:
             # Set this in all "subscribers"
             subs = self.streams[self.output[index]]
@@ -69,3 +75,36 @@ class Calculator:
         val = self.input_data[index]
         self.input_data[index] = None
         return val
+
+
+class SwitchNode(Calculator):
+
+    _switch_state = 0
+
+    def __init__(self, name, s, options=None):
+        super().__init__(name, s, options)
+
+    def process(self):
+        input_count = self.get_input_count()
+        start = self.switch_state * input_count
+        for i in range(0, input_count):
+            data = self.get(i)
+            if data:
+                self.set_output(start + i, data)
+        return True
+
+    @property
+    def switch_state(self):
+        return self._switch_state
+
+    @switch_state.setter
+    def switch_state(self, state):
+        input_count = self.get_input_count()
+        output_count = self.get_output_count()
+        if state * input_count > output_count:
+            print("Error: to large state specified")
+        else:
+            self._switch_state = state
+
+    def toggle_state(self):
+        self._switch_state = 0 if self._switch_state > 0 else 1
