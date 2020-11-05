@@ -1,0 +1,47 @@
+input_stream: "input_video"
+input_stream:  "input_audio"
+output_stream: "output_video"
+
+# Calculate diff on image and only send on when large diff is detected
+node: {
+  calculator: "ImageMovementDetector"
+  input_stream: "input_video"
+  output_stream: "motion_detected"
+  map_node_options: {
+    doubleOptions: { key:"threshold"; value:0.01 }
+    doubleOptions: { key:"min_fps"; value:0.5 }
+    doubleOptions: { key:"max_fps"; value:0.25 }
+  }
+}
+
+node: {
+  calculator: "HandDetector"
+  input_stream: "motion_detected"
+  output_stream: "output_video"
+  output_stream: "hand_detections"
+}
+
+node: {
+  calculator: "HandThumbDetector"
+  input_stream: "hand_detections"
+  output_stream: "thumb_detections"
+}
+
+node: {
+  calculator: "VoskVoiceToTextCalculator"
+  input_stream: "input_audio"
+  output_stream: "voice_to_text"
+  output_stream: "voice_to_word"
+}
+
+node: {
+  calculator: "ShowStatusImageFromFiles"
+  input_stream: "voice_to_word"
+  map_node_options: {
+    stringOptions: { key:"onImage"; value:"images/on.png" }
+    stringOptions: { key:"onWord";  value:"open" }
+    stringOptions: { key:"offImage"; value:"images/off.png" }
+    stringOptions: { key:"autoOpen"; value:"off" }
+    doubleOptions: { key:"statusOnTime"; value: 4.0 }
+  }
+}
