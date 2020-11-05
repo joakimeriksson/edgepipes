@@ -9,7 +9,7 @@ node: {
   output_stream: "motion_detected"
   map_node_options: {
     doubleOptions: { key:"threshold"; value:0.01 }
-    doubleOptions: { key:"min_fps"; value:0.5 }
+    doubleOptions: { key:"min_fps"; value:1.0 }
     doubleOptions: { key:"max_fps"; value:0.25 }
   }
 }
@@ -44,4 +44,10 @@ node: {
     stringOptions: { key:"autoOpen"; value:"off" }
     doubleOptions: { key:"statusOnTime"; value: 4.0 }
   }
+}
+
+node: {
+  calculator: "ConsumerNode"
+  input_stream: "thumb_detections"
+  input_stream: "voice_to_text"
 }

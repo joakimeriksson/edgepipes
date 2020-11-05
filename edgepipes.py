@@ -22,7 +22,7 @@ from calculators.image import *
 from calculators.mqtt import *
 from calculators.hand import *
 from calculators.audio import *
-from calculators.core import SwitchNode
+from calculators.core import *
 from google.protobuf import text_format
 import pipeconfig_pb2
 import sched

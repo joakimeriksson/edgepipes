@@ -108,3 +108,15 @@ class SwitchNode(Calculator):
 
     def toggle_state(self):
         self._switch_state = 0 if self._switch_state > 0 else 1
+
+
+class ConsumerNode(Calculator):
+
+    def __init__(self, name, s, options=None):
+        super().__init__(name, s, options)
+
+    def process(self):
+        # Clear all input data
+        for i in range(0, self.get_input_count()):
+            self.get(i)
+        return True
