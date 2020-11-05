@@ -58,12 +58,9 @@ class ImageMovementDetector(Calculator):
     def process(self):
         image = self.get(0)
         if isinstance(image, ImageData):
-            publish = False
-            if self._last_image_ts == 0:
-                # First image - always update weights and publish
-                self.avg.calculate_diff(image.image)
-                publish = True
-            else:
+            publish = self._last_image_ts == 0
+            value = self.avg.calculate_diff(image.image)
+            if not publish:
                 if self.max_fps > 0 and 1.0 / self.max_fps > image.timestamp - self._last_image_ts:
                     # Image too soon after previous. Drop this frame
                     self.drop_by_fps_counter += 1
@@ -71,12 +68,10 @@ class ImageMovementDetector(Calculator):
                 if self.min_fps > 0 and 1.0 / self.min_fps < image.timestamp - self._last_image_ts:
                     publish = True
                     self.publish_by_fps += 1
-                if not publish:
-                    value = self.avg.calculate_diff(image.image)
-                    if value > self.threshold:
-                        publish = True
-                        print(" *** Trigger motion!!! => output set!")
-                        self.publish_by_motion += 1
+                if value > self.threshold:
+                    publish = True
+                    print(" *** Trigger motion!!! => output set!")
+                    self.publish_by_motion += 1
             if publish:
                 self._last_image_ts = image.timestamp
                 self.set_output(0, image)
