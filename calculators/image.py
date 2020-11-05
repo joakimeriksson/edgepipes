@@ -38,8 +38,8 @@ class ImageMovementDetector(Calculator):
 
     _last_image_ts = 0
     threshold = 0.01
-    min_fps = 1.0
-    max_fps = 0.5
+    min_fps = 0
+    max_fps = 0
     publish_by_fps = 0
     publish_by_motion = 0
     drop_by_fps_counter = 0
