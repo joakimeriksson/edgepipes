@@ -1,48 +1,65 @@
 from datetime import datetime
-from calculators.core import Calculator
+from queue import Queue
+from calculators.core import Calculator, TextData
+import json
 import pyaudio
+
 
 class AudioData:
     def __init__(self, audio, timestamp):
         self.audio = audio
         self.timestamp = timestamp
 
+    def add_data(self, more_data):
+        self.audio += more_data.audio
+
+
+class VoiceTextData(TextData):
+    def __init__(self, text, timestamp, info=None):
+        super().__init__(text, timestamp)
+        self.info = info
+
+
 class AudioCaptureNode(Calculator):
 
     cap = None
     paud = None
+    audio = None
 
     def __init__(self, name, s, options=None):
         super().__init__(name, s, options)
         self.output_data = [None]
-        self.output_buffers = []
+        self.output_queue = Queue(maxsize=16)
         if options is not None and 'audio' in options:
             self.audio = options['audio']
-        else:
-            self.audio = 0
         print("*** Capture from ", self.audio)
         self.paud = pyaudio.PyAudio()
 
-    def callback(self, in_data, frame_count, time_info, status):
-        now = datetime.now()
-        timestamp = datetime.timestamp(now)
-        print("Got callback")
-        self.output_buffers += [AudioData(in_data, timestamp)]
-        return (in_data, pyaudio.paContinue)
-
+    def _callback(self, in_data, frame_count, time_info, status):
+        # Drop sound if queue is full
+        if not self.output_queue.full():
+            now = datetime.now()
+            timestamp = datetime.timestamp(now)
+            self.output_queue.put(AudioData(in_data, timestamp))
+        return in_data, pyaudio.paContinue
 
     def process(self):
-        data = None
-        if len(self.output_buffers) > 0:
-            data = self.output_buffers.pop(0)
-            if len(self.output_buffers) > 0:
-                print("Warning - more audio left in buffer: ", len(self.output_buffers))
-        elif self.cap is None:
-            self.cap = self.paud.open(format=pyaudio.paInt16, channels=1, rate=16000, input=True, frames_per_buffer=8000, stream_callback=self.callback)
-            self.cap.start_stream()
-        if data is not None:
+        if not self.output_queue.empty():
+            data = self.output_queue.get()
+            while not self.output_queue.empty():
+                data.add_data(self.output_queue.get())
+                print("Added more audio: ", type(data.audio), len(data.audio))
             self.set_output(0, data)
             return True
+        if self.cap is None:
+            if self.audio is not None:
+                self.cap = self.paud.open(format=pyaudio.paInt16, channels=1, rate=16000, input=True,
+                                          input_device_index=self.audio, frames_per_buffer=8000,
+                                          stream_callback=self._callback)
+            else:
+                self.cap = self.paud.open(format=pyaudio.paInt16, channels=1, rate=16000, input=True,
+                                          frames_per_buffer=8000, stream_callback=self._callback)
+            self.cap.start_stream()
         return False
 
     def close(self):
@@ -54,10 +71,17 @@ class AudioCaptureNode(Calculator):
             self.paud.terminate()
             self.paud = None
 
-def scale_minmax(X, min=0.0, max=1.0):
-    X_std = (X - X.min()) / (X.max() - X.min())
-    X_scaled = X_std * (max - min) + min
-    return X_scaled
+
+def scale_minmax(x, min=0.0, max=1.0):
+    x_min, x_max = x.min(), x.max()
+    if x_min == x_max:
+        # Scaling not possible
+        print("audio scale not possible (min == max)")
+        return x
+    x_std = (x - x_min) / (x_max - x_min)
+    x_scaled = x_std * (max - min) + min
+    return x_scaled
+
 
 def spectrogram_image(y, sr, hop_length, n_mels):
     import librosa
@@ -73,6 +97,7 @@ def spectrogram_image(y, sr, hop_length, n_mels):
     img = 255-img # invert. make black==more energy
     return img
 
+
 class SpectrogramCalculator(Calculator):
 
     def __init__(self, name, s, options=None):
@@ -87,10 +112,10 @@ class SpectrogramCalculator(Calculator):
 
         audio = self.get(0)
         if isinstance(audio, AudioData):
-            hop_length = 256 # number of samples per time-step in spectrogram
-            n_mels = 128 # number of bins in spectrogram. Height of image
-            time_steps = 384 # number of time-steps. Width of image
-            start_sample = 0 # starting at beginning
+            hop_length = 256  # number of samples per time-step in spectrogram
+            n_mels = 128      # number of bins in spectrogram. Height of image
+            time_steps = 384  # number of time-steps. Width of image
+            start_sample = 0  # starting at beginning
             length_samples = time_steps*hop_length
 
             sr = 16000
@@ -100,7 +125,7 @@ class SpectrogramCalculator(Calculator):
             else:
                 self.audio = numpy.append(self.audio, y)
 
-            if (len(self.audio) > length_samples):
+            if len(self.audio) > length_samples:
                 self.audio = self.audio[len(self.audio) - length_samples:]
             y = self.audio
             window = y[start_sample:start_sample+length_samples]
@@ -108,6 +133,7 @@ class SpectrogramCalculator(Calculator):
             self.set_output(0, ImageData(img, audio.timestamp))
             return True
         return False
+
 
 class VoskVoiceToTextCalculator(Calculator):
 
@@ -119,16 +145,23 @@ class VoskVoiceToTextCalculator(Calculator):
         self.output_data = [None, None]
 
     def process(self):
-        import vosk
         audio = self.get(0)
         if isinstance(audio, AudioData):
             if self.rec.AcceptWaveform(audio.audio):
-                res = self.rec.Result()
-                print("Voice2Text:", res)
-                self.set_output(0, res)
+                result = self.rec.Result()
+                result_json = json.loads(result)
+                if 'text' in result_json:
+                    text = result_json['text']
+                    if text:
+                        print("Voice2Text:", repr(text), result_json)
+                        self.set_output(0, VoiceTextData(text, audio.timestamp, info=result_json))
             else:
-                res = self.rec.PartialResult()
-                print("Voice2Word:", res)
-                self.set_output(1, res)
+                partial_result = self.rec.PartialResult()
+                partial_json = json.loads(partial_result)
+                if 'partial' in partial_json:
+                    text = partial_json['partial']
+                    if text:
+                        print("Voice2Text (partial): ", repr(text))
+                        self.set_output(1, VoiceTextData(text, audio.timestamp, info=partial_json))
             return True
         return False

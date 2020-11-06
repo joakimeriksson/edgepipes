@@ -72,13 +72,13 @@ class DrawUtils:
         cv2.putText(frame, label, (20, 20), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
         self.draw_elapsed(frame, time)
 
-    def draw_detections(self, frame, detections, time = None):
+    def draw_detections(self, frame, detections, time=None):
         for detection in detections:
             self.draw_detection(frame, detection.classIndex, detection.left, detection.top, detection.right, detection.bottom, detection.confidence)
         self.draw_elapsed(frame, time)
 
 class DiffFilter:
-    def __init__(self, initFrame = None):
+    def __init__(self, initFrame=None):
         self.avgframe = initFrame
 
     def calculate_diff(self, frame):

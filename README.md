@@ -1,6 +1,6 @@
 # Edgepipes - processing pipeline for Python and Edge AI/ML
 
-Experimental pipeline processing for Python. Intended for developing basic AI or IoT pipelines for testing ideas and developing PoC. The idea is to have something that reminds of Google Mediapipes for edge computer vision and audio pipelines but implemented in plain Python rather than in C++. The pipeline configuration format is heavily inspired by Mediapipes.
+Experimental pipeline processing for Python. Intended for developing basic AI or IoT pipelines for testing ideas and developing PoC. The idea is to have something that reminds of Google MediaPipe for edge computer vision and audio pipelines but implemented in plain Python rather than in C++. The pipeline configuration format is heavily inspired by Google MediaPipe.
 
 ## Installing prerequisites
 
@@ -71,7 +71,7 @@ Edgepipes are run with computer vision example by default (for now)
 > ./edgepipes.py graphs/edge_detection.pbtxt
 ```
 
-This will run the same graph as is available in Google's Mediapipes as an example of the similarities.
+This will run the same graph as is available in Google MediaPipe as an example of the similarities.
 Press 'q' in the popup window to quit the example.
 
 To specify the input video source:
@@ -121,12 +121,12 @@ Another option to start Edgepipes is to run it from an interactive CLI.
 This will allow you to play with loading pipeline, starting stopping and printing the pipeline. Future features will be to add and remove parts of the pipeline at runtime, run at different speeds, debug, etc.
 
 ## Note that the Audio examples with voice to text will require a model downloaded!
-Download the model from https://alphacephei.com/vosk/models and unpack as 'model' in the current folder where edgepipes are run.
-
+Download a model from https://alphacephei.com/vosk/models and unpack as 'model' in the current folder where Edgepipes are run.
+A recommended model to start with is `vosk-model-small-en-us-0.4`.
 
 ## Future features and ideas
 * Add a way to distribute the pipeline processing over multiple threads and machines.
 * Add a way to send messages over MQTT instead of passing results internally in Python.
-* Serialize messages in Protobufs between processes (over network).
-* Allow same config to run in different modes (e.g. local in single process or over MQTT with Protobufs) without
+* Serialize messages in Protobuf between processes (over network).
+* Allow same config to run in different modes (e.g. local in single process or over MQTT with Protobuf) without
 massive configuration change.

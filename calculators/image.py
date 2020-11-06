@@ -22,8 +22,9 @@ import cvutils
 import cv2
 import mss
 import numpy as np
+import time
 from datetime import datetime
-from calculators.core import Calculator
+from calculators.core import Calculator, TextData
 from yolo3.yolo3 import YoloV3
 
 
@@ -34,20 +35,45 @@ class ImageData:
 
 
 class ImageMovementDetector(Calculator):
+
+    _last_image_ts = 0
+    threshold = 0.01
+    min_fps = 0
+    max_fps = 0
+    publish_by_fps = 0
+    publish_by_motion = 0
+    drop_by_fps_counter = 0
+
     def __init__(self, name, s, options=None):
-        super().__init__(name, s)
+        super().__init__(name, s, options)
         self.avg = cvutils.DiffFilter()
-        self.threshold = 0.01
-        if 'threshold' in options:
-            self.threshold = options['threshold']
+        if options:
+            if 'threshold' in options:
+                self.threshold = float(options['threshold'])
+            if 'min_fps' in options:
+                self.min_fps = float(options['min_fps'])
+            if 'max_fps' in options:
+                self.max_fps = float(options['max_fps'])
 
     def process(self):
         image = self.get(0)
-        print(image)
         if isinstance(image, ImageData):
+            publish = self._last_image_ts == 0
             value = self.avg.calculate_diff(image.image)
-            if value > self.threshold:
-                print(" *** Trigger motion!!! => output set!")
+            if not publish:
+                if self.max_fps > 0 and 1.0 / self.max_fps > image.timestamp - self._last_image_ts:
+                    # Image too soon after previous. Drop this frame
+                    self.drop_by_fps_counter += 1
+                    return False
+                if self.min_fps > 0 and 1.0 / self.min_fps < image.timestamp - self._last_image_ts:
+                    publish = True
+                    self.publish_by_fps += 1
+                if value > self.threshold:
+                    publish = True
+                    print(" *** Trigger motion!!! => output set!")
+                    self.publish_by_motion += 1
+            if publish:
+                self._last_image_ts = image.timestamp
                 self.set_output(0, image)
                 return True
         return False
@@ -56,34 +82,71 @@ class ImageMovementDetector(Calculator):
 class ShowImage(Calculator):
     def process(self):
         image = self.get(0)
-        if image is not None:
+        if isinstance(image, ImageData):
             cv2.imshow(self.name, image.image)
         return True
 
+
 class ShowStatusImageFromFiles(Calculator):
+
+    status_on_time = 0
+    _current_status = False
+    _last_on_time = 0
+
     def __init__(self, name, s, options=None):
         super().__init__(name, s, options)
+        if options is None:
+            options = {}
         self.output_data = [None]
-        if options is not None and 'onImage' in options:
+        if 'onImage' in options:
             im_name = options['onImage']
             self.onImage = cv2.imread(im_name)
-        if options is not None and 'offImage' in options:
+        if 'offImage' in options:
             im_name = options['offImage']
             self.offImage = cv2.imread(im_name)
-        self.onWord = "on"
-        if options is not None and 'onWord' in options:
+        self.onWord = 'on'
+        if 'onWord' in options:
             self.onWord = options['onWord']
+        self.offWord = None
+        if 'offWord' in options:
+            self.offWord = options['offWord']
+        if 'offWord' in options:
+            self.offWord = options['offWord']
+        if 'statusOnTime' in options:
+            self.status_on_time = options['statusOnTime']
+        if 'autoOpen' in options:
+            auto_open = options['autoOpen']
+            if auto_open == 'on':
+                self.set_status(True)
+            elif auto_open == 'off':
+                self.set_status(False)
+            else:
+                print("Illegal auto open value:", auto_open)
+
+    def set_status(self, status):
+        self._current_status = status
+        if status:
+            self._last_on_time = time.time()
+            cv2.imshow("Status", self.onImage)
+        else:
+            cv2.imshow("Status", self.offImage)
 
     def process(self):
         data = self.get(0)
-        if data is not None:
-            # Assuming string!
-            print("Data:", data)
-            if self.onWord in data:
-                cv2.imshow("Status", self.onImage)
-            else:
-                cv2.imshow("Status", self.offImage)
+        if isinstance(data, TextData):
+            if self.onWord in data.text:
+                if not self._current_status:
+                    print(f"Status ON  ({data.text})")
+                self.set_status(True)
+            elif (not self.offWord and self.status_on_time == 0) or (self.offWord and self.offWord in data.text):
+                if self._current_status:
+                    print(f"Status OFF ({data.text})")
+                self.set_status(False)
+        if self._current_status and self.status_on_time > 0 and self._last_on_time + self.status_on_time <= time.time():
+            print("Status OFF by timeout")
+            self.set_status(False)
         return True
+
 
 class CaptureNode(Calculator):
 
@@ -94,17 +157,30 @@ class CaptureNode(Calculator):
     def __init__(self, name, s, options=None):
         super().__init__(name, s, options)
         self.output_data = [None]
-        if options is not None and 'video' in options:
-            self.video = int(options['video']) if options['video'].isnumeric() else options['video']
-        else:
-            self.video = 0
-        if type(self.video) is str and self.video.startswith('screen'):
-            monitor = 1
-            self.screens = mss.mss()
-            # {'left': 0, 'top': -336, 'width': 6800, 'height': 1440}
-            self.monitor_area = self.screens.monitors[monitor]
-            print(f"*** Capture from {self.video} area {self.monitor_area}")
-        else:
+        self.video = options['video'] if options and 'video' in options else 0
+        if type(self.video) is str:
+            if self.video.startswith('screen'):
+                monitor = 1
+                self.screens = mss.mss()
+                # {'left': 0, 'top': -336, 'width': 6800, 'height': 1440}
+                self.monitor_area = self.screens.monitors[monitor]
+                print(f"*** Capture from {self.video} area {self.monitor_area}")
+            elif self.video.startswith("rpicam"):
+                cw, ch = 1280, 720
+                dw, dh = 1280, 720
+                fps = 8
+                flip = 2
+                self.video = ('nvarguscamerasrc ! '
+                              'video/x-raw(memory:NVMM), width=%d, height=%d, format=NV12, framerate=%d/1 ! '
+                              'nvvidconv flip-method=%d ! '
+                              'video/x-raw, width=%d, height=%d, format=BGRx ! '
+                              'videoconvert ! '
+                              'video/x-raw, format=BGR ! appsink' %
+                              (cw, ch, fps, flip, dw, dh)
+                              )
+            elif self.video.isnumeric():
+                self.video = int(self.video)
+        if not self.screens:
             print("*** Capture from", self.video)
             self.cap = cv2.VideoCapture(self.video)
 
@@ -135,7 +211,7 @@ class CaptureNode(Calculator):
 
 class YoloDetector(Calculator):
     def __init__(self, name, s, options=None):
-        super().__init__(name, s)
+        super().__init__(name, s, options)
         self.input_data = [None]
         self.yolo = YoloV3(0.5, 0.4)
 
@@ -150,9 +226,10 @@ class YoloDetector(Calculator):
                 return True
         return False
 
+
 class DrawDetections(Calculator):
     def __init__(self, name, s, options=None):
-        super().__init__(name, s)
+        super().__init__(name, s, options)
         self.input_data = [None, None]
 
     def process(self):
@@ -165,6 +242,7 @@ class DrawDetections(Calculator):
                 self.set_output(0, ImageData(frame, image.timestamp))
                 return True
         return False
+
 
 class LuminanceCalculator(Calculator):
     def __init__(self, name, s, options=None):
@@ -179,6 +257,7 @@ class LuminanceCalculator(Calculator):
                 self.set_output(0, ImageData(gray, image.timestamp))
             return True
 
+
 class SobelEdgesCalculator(Calculator):
     def __init__(self, name, s, options=None):
         super().__init__(name, s, options)
@@ -188,7 +267,7 @@ class SobelEdgesCalculator(Calculator):
         if self.input_data[0] is not None:
             image = self.get(0)
             if isinstance(image, ImageData):
-                img = cv2.GaussianBlur(image.image, (3,3), 0)
+                img = cv2.GaussianBlur(image.image, (3, 3), 0)
                 sobelx = cv2.Sobel(img, cv2.CV_64F, 1, 0, ksize=5)
                 self.set_output(0, ImageData(sobelx, image.timestamp))
             return True

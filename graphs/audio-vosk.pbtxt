@@ -1,0 +1,9 @@
+# Simple example using Vosk for offline voice recognition
+
+input_stream: "input_audio"
+
+node: {
+  calculator: "VoskVoiceToTextCalculator"
+  input_stream: "input_audio"
+  output_stream: "output_text"
+}
