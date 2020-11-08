@@ -5,6 +5,7 @@ import os
 import sys
 import threading
 import edgepipes
+import pyaudio
 from calculators.core import SwitchNode
 from cmd import Cmd
 import networkx as nx
@@ -44,6 +45,15 @@ class PipeCli(Cmd):
         """set the current (default) audio stream input. (setaudio <source>)"""
         print("Set audio input '{}'".format(inp))
         self.options['input_audio'] = {'audio': inp}
+
+    def do_listaudio(self, inp):
+        """list the currently available audio input devices"""
+        p = pyaudio.PyAudio()
+        info = p.get_host_api_info_by_index(0)
+        device_count = info.get('deviceCount')
+        for i in range(0, device_count):
+            if (p.get_device_info_by_host_api_device_index(0, i).get('maxInputChannels')) > 0:
+                print("Audio Input Device index", i, "-", p.get_device_info_by_host_api_device_index(0, i).get('name'))
 
     def do_togglestate(self, inp):
         nodes = self.pipeline.get_nodes_by_type(SwitchNode)
