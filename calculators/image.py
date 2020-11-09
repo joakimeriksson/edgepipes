@@ -226,6 +226,33 @@ class YoloDetector(Calculator):
                 return True
         return False
 
+class TRTYoloDetector(Calculator):    
+    def __init__(self, name, s, options=None):
+        import pycuda.autoinit  # This is needed for initializing CUDA driver
+        from yolo.yolo_with_plugins import TrtYOLO
+        super().__init__(name, s, options)
+        self.input_data = [None]
+        h = w = 416
+        self.yolo = TrtYOLO("yolov3_mask_last-416", (h, w), 3)
+        self.cls_dict = {0: 'Mask good', 1:'No Mask(1)', 2:'No Mask (2)'}
+
+    def process(self):
+        image = self.get(0)
+        if isinstance(image, ImageData):
+            nf = image.image.copy()
+            boxes, confs, clss = self.yolo.detect(nf, 0.3)
+            print("Boxes:", boxes, " confs:", confs, " cls:", clss)
+            d = []
+            for i in range(len(boxes)):
+                c = int(clss[i])
+                d = d + [(self.cls_dict[c], confs[i], (boxes[i][0], boxes[i][1], boxes[i][2], boxes[i][3]))]
+            print(d)
+            if d != []:
+                self.set_output(0, ImageData(nf, image.timestamp))
+                self.set_output(1, d)
+                return True
+        return False
+
 
 class DrawDetections(Calculator):
     def __init__(self, name, s, options=None):
