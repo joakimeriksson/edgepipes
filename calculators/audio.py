@@ -3,6 +3,7 @@ from queue import Queue
 from calculators.core import Calculator, TextData
 import json
 import pyaudio
+import re
 
 
 class AudioData:
@@ -11,7 +12,7 @@ class AudioData:
         self.timestamp = timestamp
 
     def add_data(self, more_data):
-        self.audio += more_data.audio
+        self.audio += more_data.audio_index
 
 
 class VoiceTextData(TextData):
@@ -24,16 +25,39 @@ class AudioCaptureNode(Calculator):
 
     cap = None
     paud = None
-    audio = None
+    audio_index = None
 
     def __init__(self, name, s, options=None):
         super().__init__(name, s, options)
         self.output_data = [None]
         self.output_queue = Queue(maxsize=16)
-        if options is not None and 'audio' in options:
-            self.audio = options['audio']
-        print("*** Capture from ", self.audio)
         self.paud = pyaudio.PyAudio()
+        if options is not None and 'audio' in options:
+            audio_description = options['audio']
+            if isinstance(audio_description, str):
+                if audio_description.isnumeric():
+                    self.audio_index = int(audio_description)
+                elif audio_description.startswith("name:"):
+                    name = audio_description[5:]
+                    pattern = re.compile(name)
+                    info = self.paud.get_host_api_info_by_index(0)
+                    for i in range(0, info.get('deviceCount')):
+                        device_info = self.paud.get_device_info_by_host_api_device_index(0, i)
+                        if device_info.get('maxInputChannels') > 0:
+                            device_name = device_info.get('name')
+                            if pattern.search(device_name):
+                                print(f"Found audio device {device_name} at audio index {i}")
+                                self.audio_index = i
+                                break
+                    if self.audio_index is None:
+                        print("Could not find an audio device matching", name)
+                else:
+                    print("Unknown audio description:", audio_description)
+            elif isinstance(audio_description, int):
+                self.audio_index = audio_description
+            else:
+                print("Illegal audio description - must be int or str")
+        print("*** Capture from", 'default' if self.audio_index is None else self.audio_index)
 
     def _callback(self, in_data, frame_count, time_info, status):
         # Drop sound if queue is full
@@ -48,13 +72,13 @@ class AudioCaptureNode(Calculator):
             data = self.output_queue.get()
             while not self.output_queue.empty():
                 data.add_data(self.output_queue.get())
-                print("Added more audio: ", type(data.audio), len(data.audio))
+                print("Added more audio: ", type(data.audio_index), len(data.audio_index))
             self.set_output(0, data)
             return True
         if self.cap is None:
-            if self.audio is not None:
+            if self.audio_index is not None:
                 self.cap = self.paud.open(format=pyaudio.paInt16, channels=1, rate=16000, input=True,
-                                          input_device_index=self.audio, frames_per_buffer=8000,
+                                          input_device_index=self.audio_index, frames_per_buffer=8000,
                                           stream_callback=self._callback)
             else:
                 self.cap = self.paud.open(format=pyaudio.paInt16, channels=1, rate=16000, input=True,

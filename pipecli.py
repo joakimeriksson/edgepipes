@@ -6,6 +6,7 @@ import sys
 import threading
 import edgepipes
 import pyaudio
+import cv2
 from calculators.core import SwitchNode
 from cmd import Cmd
 import networkx as nx
@@ -46,14 +47,38 @@ class PipeCli(Cmd):
         print("Set audio input '{}'".format(inp))
         self.options['input_audio'] = {'audio': inp}
 
-    def do_listaudio(self, inp):
-        """list the currently available audio input devices"""
-        p = pyaudio.PyAudio()
-        info = p.get_host_api_info_by_index(0)
-        device_count = info.get('deviceCount')
-        for i in range(0, device_count):
-            if (p.get_device_info_by_host_api_device_index(0, i).get('maxInputChannels')) > 0:
-                print("Audio Input Device index", i, "-", p.get_device_info_by_host_api_device_index(0, i).get('name'))
+    def do_list(self, inp):
+        """list the available audio or video input devices"""
+        if inp == 'audio':
+            paud = pyaudio.PyAudio()
+            info = paud.get_host_api_info_by_index(0)
+            device_count = info.get('deviceCount')
+            print("Available audio input devices:")
+            for i in range(0, device_count):
+                device_info = paud.get_device_info_by_host_api_device_index(0, i)
+                if (device_info.get('maxInputChannels')) > 0:
+                    print(f"  Audio Input Device index {i} - {device_info.get('name')}")
+        elif inp == 'video':
+            ports = []
+            dev_port = 0
+            while True:
+                camera = cv2.VideoCapture(dev_port)
+                if not camera.isOpened():
+                    break
+                is_frame_read, img = camera.read()
+                w, h = int(camera.get(3)), int(camera.get(4))
+                ports.append((dev_port, is_frame_read, w, h))
+                camera.release()
+                dev_port += 1
+            if ports:
+                print("Available video input devices:")
+                for port in ports:
+                    if port[1]:
+                        print(f"  Port {port[0]} ({port[2]} x {port[3]})")
+                    else:
+                        print(f"  Port {port[0]} ({port[2]} x {port[3]}) - failed to read")
+        else:
+            print("Unknown option to list")
 
     def do_togglestate(self, inp):
         nodes = self.pipeline.get_nodes_by_type(SwitchNode)
