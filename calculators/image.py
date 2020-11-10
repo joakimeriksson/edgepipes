@@ -229,7 +229,7 @@ class YoloDetector(Calculator):
 class TRTYoloDetector(Calculator):    
     def __init__(self, name, s, options=None):
         import pycuda.autoinit  # This is needed for initializing CUDA driver
-        from yolo.yolo_with_plugins import TrtYOLO
+        from trtyolo.yolo_with_plugins import TrtYOLO
         super().__init__(name, s, options)
         self.input_data = [None]
         h = w = 416
