@@ -92,6 +92,7 @@ class ShowStatusImageFromFiles(Calculator):
     status_on_time = 0
     _current_status = False
     _last_on_time = 0
+    _window_title = 'Status'
 
     def __init__(self, name, s, options=None):
         super().__init__(name, s, options)
@@ -114,6 +115,8 @@ class ShowStatusImageFromFiles(Calculator):
             self.offWord = options['offWord']
         if 'statusOnTime' in options:
             self.status_on_time = options['statusOnTime']
+        if 'windowTitle' in options:
+            self._window_title = options['windowTitle']
         if 'autoOpen' in options:
             auto_open = options['autoOpen']
             if auto_open == 'on':
@@ -127,9 +130,9 @@ class ShowStatusImageFromFiles(Calculator):
         self._current_status = status
         if status:
             self._last_on_time = time.time()
-            cv2.imshow("Status", self.onImage)
+            cv2.imshow(self._window_title, self.onImage)
         else:
-            cv2.imshow("Status", self.offImage)
+            cv2.imshow(self._window_title, self.offImage)
 
     def process(self):
         data = self.get(0)
