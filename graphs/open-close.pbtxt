@@ -38,6 +38,7 @@ node: {
   calculator: "ShowStatusImageFromFiles"
   input_stream: "voice_to_word"
   map_node_options: {
+    stringOptions: { key:"windowTitle"; value:"Voice Status" }
     stringOptions: { key:"onImage"; value:"images/on.png" }
     stringOptions: { key:"onWord";  value:"open" }
     stringOptions: { key:"offImage"; value:"images/off.png" }
@@ -47,7 +48,19 @@ node: {
 }
 
 node: {
-  calculator: "ConsumerNode"
+  calculator: "ShowStatusImageFromFiles"
   input_stream: "thumb_detections"
+  map_node_options: {
+    stringOptions: { key:"windowTitle"; value:"Thumb Status" }
+    stringOptions: { key:"onImage"; value:"images/on.png" }
+    stringOptions: { key:"onWord";  value:"Thumb up" }
+    stringOptions: { key:"offImage"; value:"images/off.png" }
+    stringOptions: { key:"autoOpen"; value:"off" }
+    doubleOptions: { key:"statusOnTime"; value: 4.0 }
+  }
+}
+
+node: {
+  calculator: "ConsumerNode"
   input_stream: "voice_to_text"
 }
