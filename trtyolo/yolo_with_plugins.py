@@ -226,7 +226,7 @@ def get_yolo_grid_sizes(model_name, h, w):
         else:
             return [(h // 8) * (w // 8), (h // 16) * (w // 16), (h // 32) * (w // 32)]
     else:
-        raise ValueError('ERROR: unknown model (%s)!' % args.model)
+        raise ValueError('ERROR: unknown model (%s)!' % model_name)
 
 
 class TrtYOLO(object):
