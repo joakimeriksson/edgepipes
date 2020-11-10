@@ -12,7 +12,7 @@ class AudioData:
         self.timestamp = timestamp
 
     def add_data(self, more_data):
-        self.audio += more_data.audio_index
+        self.audio += more_data.audio
 
 
 class VoiceTextData(TextData):
@@ -72,7 +72,7 @@ class AudioCaptureNode(Calculator):
             data = self.output_queue.get()
             while not self.output_queue.empty():
                 data.add_data(self.output_queue.get())
-                print("Added more audio: ", type(data.audio_index), len(data.audio_index))
+                print("Added more audio: ", type(data.audio), len(data.audio))
             self.set_output(0, data)
             return True
         if self.cap is None:
