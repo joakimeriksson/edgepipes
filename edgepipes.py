@@ -163,6 +163,7 @@ class Pipeline:
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 return
             self.scheduler.run()
+        cv2.destroyAllWindows()
 
     def step(self):
         self.run_step = 1
