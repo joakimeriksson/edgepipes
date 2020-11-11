@@ -258,7 +258,8 @@ class YoloDetector(Calculator):
                 return True
         return False
 
-class TRTYoloDetector(Calculator):    
+
+class TRTYoloDetector(Calculator):
     def __init__(self, name, s, options=None):
         import pycuda.autoinit  # This is needed for initializing CUDA driver
         from trtyolo.yolo_with_plugins import TrtYOLO
@@ -277,12 +278,11 @@ class TRTYoloDetector(Calculator):
             d = []
             for i in range(len(boxes)):
                 c = int(clss[i])
-                d = d + [(self.cls_dict[c], confs[i], (boxes[i][0], boxes[i][1], boxes[i][2], boxes[i][3]))]
+                d.append((self.cls_dict[c], confs[i], (boxes[i][0], boxes[i][1], boxes[i][2], boxes[i][3])))
             print(d)
-            if d != []:
-                self.set_output(0, ImageData(nf, image.timestamp))
-                self.set_output(1, d)
-                return True
+            self.set_output(0, ImageData(nf, image.timestamp))
+            self.set_output(1, d)
+            return True
         return False
 
 
