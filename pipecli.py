@@ -58,6 +58,7 @@ class PipeCli(Cmd):
                 device_info = paud.get_device_info_by_host_api_device_index(0, i)
                 if (device_info.get('maxInputChannels')) > 0:
                     print(f"  Audio Input Device index {i} - {device_info.get('name')}")
+            paud.terminate()
         elif inp == 'video':
             ports = []
             dev_port = 0
@@ -85,7 +86,7 @@ class PipeCli(Cmd):
         if nodes:
             for n in nodes:
                 n.toggle_state()
-                print(f"Toggled state in {n.name} => {n.switch_state}")
+                print(f"Toggled state in {n.name} => {n.get_switch_state()}")
         else:
             print("Found no switch nodes to toggle")
 

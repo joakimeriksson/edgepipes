@@ -24,7 +24,7 @@ import mss
 import numpy as np
 import time
 from datetime import datetime
-from calculators.core import Calculator, TextData
+from calculators.core import Calculator, SwitchNode, TextData
 from yolo3.yolo3 import YoloV3
 
 
@@ -149,38 +149,36 @@ class ShowStatusImageFromFiles(Calculator):
             self.set_status(False)
         return True
 
-class InputSwitchButton(Calculator):
 
-    def toggle(self, event,x,y,flags,param):
-        if event == cv2.EVENT_LBUTTONUP:
-            self.switch = not self.switch
-            if self.switch:
-                cv2.circle(self.image,(150,150),100,(255,128,128),-1)
+class InputSwitchButton(SwitchNode):
 
-            else:
-                cv2.circle(self.image,(150,150),100,(128,255,128),-1)
-            cv2.imshow(self.name, self.image)
+    _update_image = True
 
     def __init__(self, name, s, options=None):
         super().__init__(name, s, options)
-        self.output_data = [None, None]
-        self.switch = True
-        self.image = np.zeros((300,300,3), np.uint8)
-        cv2.circle(self.image,(150,150),100,(255,128,128),-1)
+        self.image = np.zeros((300, 300, 3), np.uint8)
+        cv2.circle(self.image, (150, 150), 100, (255, 128, 128), -1)
         cv2.imshow(name, self.image)
-        self.name = name
-        cv2.setMouseCallback(name, self.toggle)
+        cv2.setMouseCallback(name, self._toggle)
+
+    def _toggle(self, event, x, y, flags, param):
+        if event == cv2.EVENT_LBUTTONUP:
+            self.toggle_state()
+
+    def set_switch_state(self, state):
+        super().set_switch_state(state)
+        self._update_image = True
 
     def process(self):
-        data = self.get(0)
-        if data is not None:
-            if self.switch:
-                print("Output to 0")
-                self.set_output(0, data)
+        if self._update_image:
+            self._update_image = False
+            if self.get_switch_state() != 0:
+                cv2.circle(self.image, (150, 150), 100, (255, 128, 128), -1)
             else:
-                print("Output to 1")
-                self.set_output(1, data)
-        return True
+                cv2.circle(self.image, (150, 150), 100, (128, 255, 128), -1)
+            cv2.imshow(self.name, self.image)
+        return super().process()
+
 
 class CaptureNode(Calculator):
 

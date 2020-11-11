@@ -86,28 +86,26 @@ class SwitchNode(Calculator):
 
     def process(self):
         input_count = self.get_input_count()
-        start = self.switch_state * input_count
+        start = self._switch_state * input_count
         for i in range(0, input_count):
             data = self.get(i)
             if data:
                 self.set_output(start + i, data)
         return True
 
-    @property
-    def switch_state(self):
+    def get_switch_state(self):
         return self._switch_state
 
-    @switch_state.setter
-    def switch_state(self, state):
+    def set_switch_state(self, state):
         input_count = self.get_input_count()
         output_count = self.get_output_count()
         if state * input_count > output_count:
-            print("Error: to large state specified")
+            print("Error: to large state specified:", state)
         else:
             self._switch_state = state
 
     def toggle_state(self):
-        self._switch_state = 0 if self._switch_state > 0 else 1
+        self.set_switch_state(0 if self._switch_state > 0 else 1)
 
 
 class ConsumerNode(Calculator):
