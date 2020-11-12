@@ -53,6 +53,12 @@ class PipeCli(Cmd):
             paud = pyaudio.PyAudio()
             info = paud.get_host_api_info_by_index(0)
             device_count = info.get('deviceCount')
+            print("Available audio output devices:")
+            for i in range(0, device_count):
+                device_info = paud.get_device_info_by_host_api_device_index(0, i)
+                if (device_info.get('maxOutputChannels')) > 0:
+                    print(f"  Audio Output Device index {i} - {device_info.get('name')}")
+            print()
             print("Available audio input devices:")
             for i in range(0, device_count):
                 device_info = paud.get_device_info_by_host_api_device_index(0, i)
