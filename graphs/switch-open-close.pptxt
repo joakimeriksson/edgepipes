@@ -58,6 +58,14 @@ node: {
 }
 
 node: {
+  calculator: "PlaySound"
+  input_stream: "voice_to_word"
+  map_node_options: {
+    stringOptions: { key:"onOpen"; value:"sounds/opening-door-1.wav" }
+  }
+}
+
+node: {
   calculator: "ShowStatusImageFromFiles"
   input_stream: "thumb_detections"
   map_node_options: {

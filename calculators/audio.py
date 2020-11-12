@@ -4,6 +4,7 @@ from calculators.core import Calculator, TextData
 import json
 import pyaudio
 import re
+import wave
 
 
 class AudioData:
@@ -124,7 +125,6 @@ def spectrogram_image(y, sr, hop_length, n_mels):
 class SpectrogramCalculator(Calculator):
 
     def __init__(self, name, s, options=None):
-        import numpy
         super().__init__(name, s, options)
         self.output_data = [None]
         self.audio = None
@@ -188,3 +188,79 @@ class VoskVoiceToTextCalculator(Calculator):
                         self.set_output(1, VoiceTextData(text, audio.timestamp, info=partial_json))
             return True
         return False
+
+
+class PlaySound(Calculator):
+
+    _paud = None
+    _stream = None
+    _wf = None
+
+    def __init__(self, name, s, options=None):
+        super().__init__(name, s, options)
+        self._sound_table = {}
+        if options is not None:
+            for w in [w for w in options.keys() if w.startswith("on")]:
+                self._sound_table[w[2:].lower()] = options[w]
+
+    def process(self):
+        text = self.get(0)
+        if not isinstance(text, TextData):
+            if self._stream and not self._stream.is_active():
+                self.close()
+            return False
+
+        sound_file = None
+        for w in self._sound_table.keys():
+            if w in text.text:
+                sound_file = self._sound_table[w]
+                break
+
+        if sound_file is None:
+            return False
+
+        if self._stream:
+            self.stop_sound()
+
+        print(f"On '{text.text}' playing {sound_file}")
+
+        try:
+            # open the file for reading.
+            self._wf = wave.open(sound_file, 'rb')
+
+            # create an audio object
+            if self._paud is None:
+                self._paud = pyaudio.PyAudio()
+
+            # length of data to read.
+            chunk = 1024
+            stream = self._paud.open(format=self._paud.get_format_from_width(self._wf.getsampwidth()),
+                                     channels=self._wf.getnchannels(),
+                                     rate=self._wf.getframerate(),
+                                     frames_per_buffer=chunk,
+                                     stream_callback=self._playing_callback,
+                                     output=True)
+            stream.start_stream()
+            return True
+        except FileNotFoundError:
+            print("Could not open the sound file", sound_file)
+        return False
+
+    def _playing_callback(self, in_data, frame_count, time_info, status):
+        data = self._wf.readframes(frame_count) if self._wf else b''
+        return (data, pyaudio.paContinue) if data else (data, pyaudio.paComplete)
+
+    def stop_sound(self):
+        if self._stream:
+            self._stream.stop_stream()
+            self._stream.close()
+            self._stream = None
+        if self._wf:
+            self._wf.close()
+            self._wf = None
+
+    def close(self):
+        self.stop_sound()
+        if self._paud:
+            self._paud.terminate()
+            self._paud = None
