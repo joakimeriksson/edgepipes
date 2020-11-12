@@ -35,29 +35,7 @@ class AudioCaptureNode(Calculator):
         self.paud = pyaudio.PyAudio()
         if options is not None and 'audio' in options:
             audio_description = options['audio']
-            if isinstance(audio_description, str):
-                if audio_description.isnumeric():
-                    self.audio_index = int(audio_description)
-                elif audio_description.startswith("name:"):
-                    name = audio_description[5:]
-                    pattern = re.compile(name)
-                    info = self.paud.get_host_api_info_by_index(0)
-                    for i in range(0, info.get('deviceCount')):
-                        device_info = self.paud.get_device_info_by_host_api_device_index(0, i)
-                        if device_info.get('maxInputChannels') > 0:
-                            device_name = device_info.get('name')
-                            if pattern.search(device_name):
-                                print(f"Found audio device {device_name} at audio index {i}")
-                                self.audio_index = i
-                                break
-                    if self.audio_index is None:
-                        print("Could not find an audio device matching", name)
-                else:
-                    print("Unknown audio description:", audio_description)
-            elif isinstance(audio_description, int):
-                self.audio_index = audio_description
-            else:
-                print("Illegal audio description - must be int or str")
+            self.audio_index = _find_audio_index(self.paud, audio_description, False)
         print("*** Capture from", 'default' if self.audio_index is None else self.audio_index)
 
     def _callback(self, in_data, frame_count, time_info, status):
@@ -76,13 +54,10 @@ class AudioCaptureNode(Calculator):
             self.set_output(0, data)
             return True
         if self.cap is None:
-            if self.audio_index is not None:
-                self.cap = self.paud.open(format=pyaudio.paInt16, channels=1, rate=16000, input=True,
-                                          input_device_index=self.audio_index, frames_per_buffer=8000,
-                                          stream_callback=self._callback)
-            else:
-                self.cap = self.paud.open(format=pyaudio.paInt16, channels=1, rate=16000, input=True,
-                                          frames_per_buffer=8000, stream_callback=self._callback)
+            input_device_index = None if self.audio_index is None else self.audio_index
+            self.cap = self.paud.open(format=pyaudio.paInt16, channels=1, rate=16000, input=True,
+                                      input_device_index=input_device_index, frames_per_buffer=8000,
+                                      stream_callback=self._callback)
             self.cap.start_stream()
         return False
 
@@ -202,6 +177,11 @@ class PlaySound(Calculator):
         if options is not None:
             for w in [w for w in options.keys() if w.startswith("on")]:
                 self._sound_table[w[2:].lower()] = options[w]
+            if 'audio' in options:
+                audio_description = options['audio']
+                paud = pyaudio.PyAudio()
+                self.audio_index = _find_audio_index(paud, audio_description, True)
+                paud.terminate()
 
     def process(self):
         text = self.get(0)
@@ -234,7 +214,9 @@ class PlaySound(Calculator):
 
             # length of data to read.
             chunk = 1024
+            output_device_index = None if self.audio_index is None else self.audio_index
             stream = self._paud.open(format=self._paud.get_format_from_width(self._wf.getsampwidth()),
+                                     output_device_index=output_device_index,
                                      channels=self._wf.getnchannels(),
                                      rate=self._wf.getframerate(),
                                      frames_per_buffer=chunk,
@@ -264,3 +246,36 @@ class PlaySound(Calculator):
         if self._paud:
             self._paud.terminate()
             self._paud = None
+
+
+def _find_audio_index(paud, audio_description, is_output):
+    if isinstance(audio_description, str):
+        if audio_description.isnumeric():
+            return int(audio_description)
+        elif audio_description.startswith("name:"):
+            name = audio_description[5:]
+            audio_index = _find_audio_index_by_name(paud, name, is_output)
+            if audio_index is None:
+                print("Could not find an audio device matching", name)
+            return audio_index
+        else:
+            print("Unknown audio description:", audio_description)
+    elif isinstance(audio_description, int):
+        return audio_description
+    else:
+        print(f"Illegal audio description '{audio_description} - must be int or string")
+    return None
+
+
+def _find_audio_index_by_name(paud, name, is_output):
+    pattern = re.compile(name)
+    info = paud.get_host_api_info_by_index(0)
+    for i in range(0, info.get('deviceCount')):
+        device_info = paud.get_device_info_by_host_api_device_index(0, i)
+        channels = 'maxOutputChannels' if is_output else 'maxInputChannels'
+        if device_info.get(channels) > 0:
+            device_name = device_info.get('name')
+            if pattern.search(device_name):
+                print(f"Found audio device {device_name} at audio index {i}")
+                return i
+    return None
