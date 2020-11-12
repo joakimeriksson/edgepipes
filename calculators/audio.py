@@ -25,17 +25,15 @@ class VoiceTextData(TextData):
 class AudioCaptureNode(Calculator):
 
     cap = None
-    paud = None
     audio_index = None
 
     def __init__(self, name, s, options=None):
         super().__init__(name, s, options)
         self.output_data = [None]
         self.output_queue = Queue(maxsize=16)
-        self.paud = pyaudio.PyAudio()
         if options is not None and 'audio' in options:
             audio_description = options['audio']
-            self.audio_index = _find_audio_index(self.paud, audio_description, False)
+            self.audio_index = _find_audio_index(audio_description, False)
         print("*** Capture from", 'default' if self.audio_index is None else self.audio_index)
 
     def _callback(self, in_data, frame_count, time_info, status):
@@ -54,10 +52,9 @@ class AudioCaptureNode(Calculator):
             self.set_output(0, data)
             return True
         if self.cap is None:
-            input_device_index = None if self.audio_index is None else self.audio_index
-            self.cap = self.paud.open(format=pyaudio.paInt16, channels=1, rate=16000, input=True,
-                                      input_device_index=input_device_index, frames_per_buffer=8000,
-                                      stream_callback=self._callback)
+            self.cap = get_pyaudio().open(format=pyaudio.paInt16, channels=1, rate=16000, input=True,
+                                          input_device_index=self.audio_index, frames_per_buffer=8000,
+                                          stream_callback=self._callback)
             self.cap.start_stream()
         return False
 
@@ -66,9 +63,6 @@ class AudioCaptureNode(Calculator):
             self.cap.stop_stream()
             self.cap.close()
             self.cap = None
-        if self.paud:
-            self.paud.terminate()
-            self.paud = None
 
 
 def scale_minmax(x, min=0.0, max=1.0):
@@ -88,12 +82,12 @@ def spectrogram_image(y, sr, hop_length, n_mels):
     # use log-melspectrogram
     mels = librosa.feature.melspectrogram(y=y, sr=sr, n_mels=n_mels,
                                           n_fft=hop_length*2, hop_length=hop_length)
-    mels = numpy.log(mels + 1e-9) # add small number to avoid log(0)
+    mels = numpy.log(mels + 1e-9)  # add small number to avoid log(0)
 
     # min-max scale to fit inside 8-bit range
     img = scale_minmax(mels, 0, 255).astype(numpy.uint8)
-    img = numpy.flip(img, axis=0) # put low frequencies at the bottom in image
-    img = 255-img # invert. make black==more energy
+    img = numpy.flip(img, axis=0)  # put low frequencies at the bottom in image
+    img = 255-img  # invert. make black==more energy
     return img
 
 
@@ -147,12 +141,17 @@ class VoskVoiceToTextCalculator(Calculator):
         if isinstance(audio, AudioData):
             if self.rec.AcceptWaveform(audio.audio):
                 result = self.rec.Result()
-                result_json = json.loads(result)
-                if 'text' in result_json:
-                    text = result_json['text']
-                    if text:
-                        print("Voice2Text:", repr(text), result_json)
-                        self.set_output(0, VoiceTextData(text, audio.timestamp, info=result_json))
+                try:
+                    result_json = json.loads(result)
+                except json.decoder.JSONDecodeError as e:
+                    print("Voice2Text: Failed to parse voice json:", e)
+                    print(result)
+                else:
+                    if 'text' in result_json:
+                        text = result_json['text']
+                        if text:
+                            print("Voice2Text:", repr(text), result_json)
+                            self.set_output(0, VoiceTextData(text, audio.timestamp, info=result_json))
             else:
                 partial_result = self.rec.PartialResult()
                 partial_json = json.loads(partial_result)
@@ -167,7 +166,8 @@ class VoskVoiceToTextCalculator(Calculator):
 
 class PlaySound(Calculator):
 
-    _paud = None
+    audio_index = None
+    _sound = None
     _stream = None
     _wf = None
 
@@ -178,16 +178,13 @@ class PlaySound(Calculator):
             for w in [w for w in options.keys() if w.startswith("on")]:
                 self._sound_table[w[2:].lower()] = options[w]
             if 'audio' in options:
-                audio_description = options['audio']
-                paud = pyaudio.PyAudio()
-                self.audio_index = _find_audio_index(paud, audio_description, True)
-                paud.terminate()
+                self.audio_index = _find_audio_index(options['audio'], True)
 
     def process(self):
         text = self.get(0)
         if not isinstance(text, TextData):
             if self._stream and not self._stream.is_active():
-                self.close()
+                self.stop_sound()
             return False
 
         sound_file = None
@@ -200,6 +197,9 @@ class PlaySound(Calculator):
             return False
 
         if self._stream:
+            if self._stream.is_active() and sound_file == self._sound:
+                print(f"On '{text.text}' playing {sound_file} (already playing)")
+                return True
             self.stop_sound()
 
         print(f"On '{text.text}' playing {sound_file}")
@@ -207,22 +207,19 @@ class PlaySound(Calculator):
         try:
             # open the file for reading.
             self._wf = wave.open(sound_file, 'rb')
-
-            # create an audio object
-            if self._paud is None:
-                self._paud = pyaudio.PyAudio()
+            self._sound = sound_file
 
             # length of data to read.
             chunk = 1024
-            output_device_index = None if self.audio_index is None else self.audio_index
-            stream = self._paud.open(format=self._paud.get_format_from_width(self._wf.getsampwidth()),
-                                     output_device_index=output_device_index,
+            paud = get_pyaudio()
+            self._stream = paud.open(format=paud.get_format_from_width(self._wf.getsampwidth()),
+                                     output_device_index=self.audio_index,
                                      channels=self._wf.getnchannels(),
                                      rate=self._wf.getframerate(),
                                      frames_per_buffer=chunk,
                                      stream_callback=self._playing_callback,
                                      output=True)
-            stream.start_stream()
+            self._stream.start_stream()
             return True
         except FileNotFoundError:
             print("Could not open the sound file", sound_file)
@@ -240,21 +237,36 @@ class PlaySound(Calculator):
         if self._wf:
             self._wf.close()
             self._wf = None
+        self._sound = None
 
     def close(self):
         self.stop_sound()
-        if self._paud:
-            self._paud.terminate()
-            self._paud = None
 
 
-def _find_audio_index(paud, audio_description, is_output):
+_pyaudio = None
+
+
+def get_pyaudio():
+    global _pyaudio
+    if not _pyaudio:
+        _pyaudio = pyaudio.PyAudio()
+    return _pyaudio
+
+
+def close_pyaudio():
+    global _pyaudio
+    if _pyaudio:
+        _pyaudio.terminate()
+        _pyaudio = None
+
+
+def _find_audio_index(audio_description, is_output):
     if isinstance(audio_description, str):
         if audio_description.isnumeric():
             return int(audio_description)
         elif audio_description.startswith("name:"):
             name = audio_description[5:]
-            audio_index = _find_audio_index_by_name(paud, name, is_output)
+            audio_index = _find_audio_index_by_name(name, is_output)
             if audio_index is None:
                 print("Could not find an audio device matching", name)
             return audio_index
@@ -267,7 +279,8 @@ def _find_audio_index(paud, audio_description, is_output):
     return None
 
 
-def _find_audio_index_by_name(paud, name, is_output):
+def _find_audio_index_by_name(name, is_output):
+    paud = get_pyaudio()
     pattern = re.compile(name)
     info = paud.get_host_api_info_by_index(0)
     for i in range(0, info.get('deviceCount')):

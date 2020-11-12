@@ -5,8 +5,8 @@ import os
 import sys
 import threading
 import edgepipes
-import pyaudio
 import cv2
+from calculators.audio import get_pyaudio
 from calculators.core import SwitchNode
 from cmd import Cmd
 import networkx as nx
@@ -50,7 +50,7 @@ class PipeCli(Cmd):
     def do_list(self, inp):
         """list the available audio or video input devices"""
         if inp == 'audio':
-            paud = pyaudio.PyAudio()
+            paud = get_pyaudio()
             info = paud.get_host_api_info_by_index(0)
             device_count = info.get('deviceCount')
             print("Available audio output devices:")
@@ -64,7 +64,6 @@ class PipeCli(Cmd):
                 device_info = paud.get_device_info_by_host_api_device_index(0, i)
                 if (device_info.get('maxInputChannels')) > 0:
                     print(f"  Audio Input Device index {i} - {device_info.get('name')}")
-            paud.terminate()
         elif inp == 'video':
             ports = []
             dev_port = 0
