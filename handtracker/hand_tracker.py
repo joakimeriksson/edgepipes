@@ -3,6 +3,7 @@ import cv2
 import numpy as np
 import tensorflow as tf
 
+
 def draw_hand(frame, kp):
     # the points where we go back to the first midpoint of the hand
     clearpoints = [4,8,12,16,20]
@@ -19,13 +20,14 @@ def draw_hand(frame, kp):
             lk = kp[0]
         p = p + 1
 
+
 def draw_box(frame, box):
     # draw the box
     for i in range(0,4):
         cv2.line(frame, (int(box[i][0]),int(box[i][1])),(int(box[(i+1)&3][0]),int(box[(i+1)&3][1])), (255,255,255), 2)
 
 
-class HandTracker():
+class HandTracker:
     r"""
     Class to use Google's Mediapipe HandTracking pipeline from Python.
     So far only detection of a single hand is supported.
@@ -43,8 +45,7 @@ class HandTracker():
         >>> keypoints, bbox = det(input_img)
     """
 
-    def __init__(self, palm_model, joint_model, anchors_path,
-                box_enlarge=1.5, box_shift=0.2):
+    def __init__(self, palm_model, joint_model, anchors_path, box_enlarge=1.5, box_shift=0.2):
         self.box_shift = box_shift
         self.box_enlarge = box_enlarge
 
@@ -149,7 +150,7 @@ class HandTracker():
         candidate_anchors = self.anchors[detecion_mask]
 
         if candidate_detect.shape[0] == 0:
-            print("No hands found")
+            # print("No hands found")
             return None, None
         # picking the widest suggestion while NMS is not implemented
         max_idx = np.argmax(candidate_detect[:, 3])
@@ -184,7 +185,6 @@ class HandTracker():
         
         img_norm = self._im_normalize(img_small)
         return img_pad, img_norm, pad
-
 
     def __call__(self, img):
         img_pad, img_norm, pad = self.preprocess_img(img)
