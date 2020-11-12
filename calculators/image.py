@@ -27,6 +27,42 @@ from datetime import datetime
 from calculators.core import Calculator, TextData
 from yolo3.yolo3 import YoloV3
 
+h = 1000
+w = 1800
+win1 = np.zeros((h,w,3), np.uint8)
+win2 = np.zeros((h,w,3), np.uint8)
+currentWin = win1
+
+wins = {"Voice Status":(0,0),
+        "Thumb Status":(380,0),
+        "output_video":(0,380)}
+
+def swap_win():
+    global win1, win2, currentWin
+    if currentWin == win1:
+        currentWin = win2
+    else:
+        currentWin = win1
+    cv2.imshow('main-window', currentWin)
+
+# initial window
+cv2.imshow('main-window', currentWin)
+
+def imshow(name, data):
+    h1,w1 = data.shape[:2]
+    print(data.shape)
+
+    print(h1,w1)
+    if name in wins:
+        x = wins[name][1]
+        y = wins[name][0]
+    else:
+        y = 100
+        x = 100
+    if len(data.shape) == 2:
+        data = cv2.cvtColor(data, cv2.COLOR_GRAY2BGR)
+    currentWin[y:y+h1,x:x+w1] = data
+    cv2.imshow('main-window', currentWin)
 
 class ImageData:
     def __init__(self, image, timestamp):
@@ -83,7 +119,7 @@ class ShowImage(Calculator):
     def process(self):
         image = self.get(0)
         if isinstance(image, ImageData):
-            cv2.imshow(self.name, image.image)
+            imshow(self.name, image.image)
         return True
 
 
@@ -129,9 +165,9 @@ class ShowStatusImageFromFiles(Calculator):
         self._current_status = status
         if status:
             self._last_on_time = time.time()
-            cv2.imshow(self._window_title, self.onImage)
+            imshow(self._window_title, self.onImage)
         else:
-            cv2.imshow(self._window_title, self.offImage)
+            imshow(self._window_title, self.offImage)
 
     def process(self):
         data = self.get(0)
@@ -156,10 +192,10 @@ class InputSwitchButton(Calculator):
             self.switch = not self.switch
             if self.switch:
                 cv2.circle(self.image,(150,150),100,(255,128,128),-1)
-
             else:
                 cv2.circle(self.image,(150,150),100,(128,255,128),-1)
             cv2.imshow(self.name, self.image)
+            swap_win()
 
     def __init__(self, name, s, options=None):
         super().__init__(name, s, options)

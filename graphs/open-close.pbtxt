@@ -2,6 +2,21 @@ input_stream: "input_video"
 input_stream:  "input_audio"
 output_stream: "output_video"
 
+# Switch one input between two outputs
+node: {
+  calculator: "InputSwitchButton"
+  input_stream: "input_video"
+  output_stream: "input_video1"
+  output_stream: "input_video2"
+}
+
+# Converts RGB images into luminance images, still stored in RGB format.
+node: {
+  calculator: "LuminanceCalculator"
+  input_stream: "input_video2"
+  output_stream: "output_video"
+}
+
 # Calculate diff on image and only send on when large diff is detected
 node: {
   calculator: "ImageMovementDetector"
