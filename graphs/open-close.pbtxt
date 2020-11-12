@@ -10,7 +10,7 @@ node: {
   map_node_options: {
     doubleOptions: { key:"threshold"; value:0.01 }
     doubleOptions: { key:"min_fps"; value:1.0 }
-    doubleOptions: { key:"max_fps"; value:0.25 }
+    doubleOptions: { key:"max_fps"; value:4.0 }
   }
 }
 
