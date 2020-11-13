@@ -9,17 +9,6 @@ import cv2
 from calculators.audio import get_pyaudio
 from calculators.core import SwitchNode
 from cmd import Cmd
-import networkx as nx
-import matplotlib.pyplot as plt
-
-
-def plot(g, labels):
-    print("Plotting... Thread:", threading.get_ident())
-    plt.subplot(121)
-    pos=nx.spring_layout(g)
-    nx.draw(g, pos, with_labels=True, font_weight='bold')
-    nx.draw_networkx_edge_labels(g ,pos,edge_labels=labels,font_size=10)
-    plt.show()
 
 
 class PipeCli(Cmd):
@@ -102,19 +91,6 @@ class PipeCli(Cmd):
             print("  input :", n.input)
             print("  output:", n.output)
         print("Done...")
-
-    def do_plot(self, inp):
-        g = nx.Graph()
-        labels = dict()
-        for n in self.pipeline.pipeline:
-            g.add_node(n.name)
-            # Add input edges
-            for ni in n.input:
-                nodes = self.pipeline.get_node_by_output(ni)
-                if len(nodes) > 0:
-                    g.add_edge(n.name, nodes[0].name)
-                    labels[(n.name,nodes[0].name)] = ni
-        self.pipeline.scheduler.enter(1, 1, plot, argument=(g,labels,))
 
     def emptyline(self):
         return
