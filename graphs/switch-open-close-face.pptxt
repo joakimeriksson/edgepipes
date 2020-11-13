@@ -1,0 +1,109 @@
+input_stream: "input_video"
+input_stream:  "input_audio"
+output_stream: "output_video"
+
+# Calculate diff on image and only send on when large diff is detected
+node: {
+  calculator: "ImageMovementDetector"
+  input_stream: "input_video"
+  output_stream: "motion_detected"
+  map_node_options: {
+    doubleOptions: { key:"threshold"; value:0.01 }
+    doubleOptions: { key:"min_fps"; value:1.0 }
+    doubleOptions: { key:"max_fps"; value:4.0 }
+  }
+}
+
+node: {
+  calculator: "InputSwitchButton"
+  input_stream: "motion_detected"
+  input_stream: "input_audio"
+  output_stream: "input_video1"
+  output_stream: "input_audio1"
+  output_stream: "input_video2"
+  output_stream: "input_audio2"
+}
+
+node: {
+  calculator: "HandDetector"
+  input_stream: "input_video1"
+  output_stream: "output_video"
+  output_stream: "hand_detections"
+}
+
+node: {
+  calculator: "HandThumbDetector"
+  input_stream: "hand_detections"
+  output_stream: "thumb_detections"
+}
+
+node: {
+  calculator: "VoskVoiceToTextCalculator"
+  input_stream: "input_audio1"
+  output_stream: "voice_to_text"
+  output_stream: "voice_to_word"
+}
+
+node: {
+  calculator: "ShowStatusImageFromFiles"
+  input_stream: "voice_to_word"
+  map_node_options: {
+    stringOptions: { key:"windowTitle"; value:"Voice Status" }
+    stringOptions: { key:"onImage"; value:"images/on.png" }
+    stringOptions: { key:"onWord";  value:"open" }
+    stringOptions: { key:"offImage"; value:"images/off.png" }
+    stringOptions: { key:"autoOpen"; value:"off" }
+    doubleOptions: { key:"statusOnTime"; value: 4.0 }
+  }
+}
+
+node: {
+  calculator: "PlaySound"
+  input_stream: "voice_to_word"
+  map_node_options: {
+    stringOptions: { key:"onOpen"; value:"sounds/opening-door-1.wav" }
+    stringOptions: { key:"audio"; value:"name:Jabra" }
+  }
+}
+
+node: {
+  calculator: "ShowStatusImageFromFiles"
+  input_stream: "thumb_detections"
+  map_node_options: {
+    stringOptions: { key:"windowTitle"; value:"Thumb Status" }
+    stringOptions: { key:"onImage"; value:"images/on.png" }
+    stringOptions: { key:"onWord";  value:"Thumb up" }
+    stringOptions: { key:"offImage"; value:"images/off.png" }
+    stringOptions: { key:"autoOpen"; value:"off" }
+    doubleOptions: { key:"statusOnTime"; value: 4.0 }
+  }
+}
+
+node: {
+  calculator: "TRTYoloDetector"
+  input_stream: "input_video2"
+  output_stream: "yolo_object_detector_img"
+  output_stream: "yolo_detections"
+}
+
+# Applies a box and label annotator to the image
+node: {
+  calculator: "DrawDetections"
+  input_stream: "input_video2"
+  input_stream: "yolo_detections"
+  output_stream: "output_video"
+}
+
+node: {
+  calculator: "face.face.FaceRecognizer"
+  input_stream: "input_video2"
+  output_stream: "output_face"
+}
+
+node: {
+  calculator: "ConsumerNode"
+  input_stream: "input_audio2"
+  input_stream: "voice_to_text"
+  input_stream: "yolo_object_detector_img"
+  input_stream: "output_face"
+}
