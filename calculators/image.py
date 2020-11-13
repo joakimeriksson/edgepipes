@@ -274,12 +274,10 @@ class TRTYoloDetector(Calculator):
         if isinstance(image, ImageData):
             nf = image.image.copy()
             boxes, confs, clss = self.yolo.detect(nf, 0.3)
-            print("Boxes:", boxes, " confs:", confs, " cls:", clss)
             d = []
             for i in range(len(boxes)):
                 c = int(clss[i])
                 d.append((self.cls_dict[c], confs[i], (boxes[i][0], boxes[i][1], boxes[i][2], boxes[i][3])))
-            print(d)
             self.set_output(0, ImageData(nf, image.timestamp))
             self.set_output(1, d)
             return True
