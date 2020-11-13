@@ -74,7 +74,7 @@ class FaceRecognizer(Calculator):
             if match:
                 print("Name: ", name)
                 cut = cut.copy()
-                cv2.putText(cut, name, (2, 22), font, 0.7, (255, 255, 255), 2, cv2.LINE_AA)
+                cv2.putText(cut, name, (5, 22), font, 0.7, (255, 255, 255), 2, cv2.LINE_AA)
             cv2.imshow('Face', cut)
 
         return frame
