@@ -127,7 +127,7 @@ For detailed instructions please see: https://developer.nvidia.com/embedded/lear
    ```
    > git clone https://github.com/joakimeriksson/edgepipes.git
    > cd edgepipes
-   > pip3 install mss paho-mqtt networkx matplotlib pycuda
+   > pip3 install mss paho-mqtt pycuda
    # For face recogniztion
    > pip3 install -r face/requirements.txt
    ```
