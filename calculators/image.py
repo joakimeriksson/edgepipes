@@ -78,12 +78,20 @@ class ImageMovementDetector(Calculator):
                 return True
         return False
 
-
 class ShowImage(Calculator):
+    _window_title = 'Status'
+
+    def __init__(self, name, s, options=None):
+        super().__init__(name, s, options)
+        if options != None and 'windowTitle' in options:
+            self._window_title = options['windowTitle']
+        else:
+            self._window_title = name
+
     def process(self):
         image = self.get(0)
         if isinstance(image, ImageData):
-            cv2.imshow(self.name, image.image)
+            cv2.imshow(self._window_title, image.image)
         return True
 
 
@@ -91,6 +99,7 @@ class ShowStatusImageFromFiles(Calculator):
     status_on_time = 0
     _current_status = False
     _last_on_time = 0
+
     _window_title = 'Status'
 
     def __init__(self, name, s, options=None):
@@ -114,8 +123,6 @@ class ShowStatusImageFromFiles(Calculator):
             self.offWord = options['offWord']
         if 'statusOnTime' in options:
             self.status_on_time = options['statusOnTime']
-        if 'windowTitle' in options:
-            self._window_title = options['windowTitle']
         if 'autoOpen' in options:
             auto_open = options['autoOpen']
             if auto_open == 'on':
@@ -132,10 +139,8 @@ class ShowStatusImageFromFiles(Calculator):
         timestamp = datetime.timestamp(now)
         if status:
             self._last_on_time = time.time()
-            cv2.imshow(self._window_title, self.onImage)
             self.set_output(0, ImageData(self.onImage, timestamp))
         else:
-            cv2.imshow(self._window_title, self.offImage)
             self.set_output(0, ImageData(self.offImage, timestamp))
 
     def process(self):
