@@ -61,7 +61,7 @@ def hello():
 
 @app.route('/graph')
 def graph():
-    net = Network(height="750px", width="100%", bgcolor="#222222", font_color="white", heading="Pipeline")
+    net = Network(height="750px", width="100%", bgcolor="#222222", font_color="white", heading="Pipeline", directed=True)
     labels = dict()
     # First add all nodes
     for n in pipeline.pipeline:
@@ -73,7 +73,7 @@ def graph():
         for ni in n.input:
             nodes = pipeline.get_node_by_output(ni)
             if len(nodes) > 0:
-                net.add_edge(n.name, nodes[0].name)
+                net.add_edge(nodes[0].name, n.name)
                 labels[(n.name, nodes[0].name)] = ni
     net.show("graph.html")
     return open("graph.html", "r").read()
