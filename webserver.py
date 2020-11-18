@@ -106,4 +106,5 @@ def start(pipes, cmd=None):
 
 def stop():
     global server
-    server.shutdown()
+    if server is not None:
+        server.shutdown()
