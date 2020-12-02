@@ -9,6 +9,10 @@ import cv2
 from calculators.audio import get_pyaudio
 from calculators.core import SwitchNode
 from cmd import Cmd
+import webserver, sys
+
+wsthread = None
+
 
 
 class PipeCli(Cmd):
@@ -24,6 +28,7 @@ class PipeCli(Cmd):
         """exit the application."""
         print("Bye")
         self.pipeline.exit()
+        webserver.stop()
         return True
 
     def do_setvideo(self, inp):
@@ -92,6 +97,10 @@ class PipeCli(Cmd):
             print("  output:", n.output)
         print("Done...")
 
+    def do_webserver(self, inp):
+        print("Starting webserver")
+        webserver.start(self.pipeline, cmd=self)
+
     def emptyline(self):
         return
 
@@ -114,7 +123,7 @@ class PipeCli(Cmd):
             txt = f.read()
             f.close()
             print("Load graphs: '{}'".format(txt))
-            self.pipeline.setup_pipeline(txt, prefix=str(self.ctr) + "/", options=self.options)
+            self.pipeline.setup_pipeline(txt, prefix=str(self.ctr) + ".", options=self.options)
             self.ctr += 1
 
     def do_start(self, inp):
@@ -126,7 +135,6 @@ class PipeCli(Cmd):
 
     def do_step(self, inp):
         self.pipeline.step()
-
 
 if __name__ == "__main__":
     try:

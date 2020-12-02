@@ -37,12 +37,11 @@ node: {
 node: {
   calculator: "ShowStatusImageFromFiles"
   input_stream: "voice_to_word"
+  output_stream: "voice_status"
   map_node_options: {
-    stringOptions: { key:"windowTitle"; value:"Voice Status" }
     stringOptions: { key:"onImage"; value:"images/on.png" }
     stringOptions: { key:"onWord";  value:"open" }
     stringOptions: { key:"offImage"; value:"images/off.png" }
-    stringOptions: { key:"autoOpen"; value:"off" }
     doubleOptions: { key:"statusOnTime"; value: 4.0 }
   }
 }
@@ -50,15 +49,31 @@ node: {
 node: {
   calculator: "ShowStatusImageFromFiles"
   input_stream: "thumb_detections"
+  output_stream: "thumb_status"
   map_node_options: {
-    stringOptions: { key:"windowTitle"; value:"Thumb Status" }
     stringOptions: { key:"onImage"; value:"images/on.png" }
     stringOptions: { key:"onWord";  value:"Thumb up" }
     stringOptions: { key:"offImage"; value:"images/off.png" }
-    stringOptions: { key:"autoOpen"; value:"off" }
     doubleOptions: { key:"statusOnTime"; value: 4.0 }
   }
 }
+
+node: {
+    calculator: "ShowImage"
+    input_stream: "thumb_status"
+    map_node_options: {
+        stringOptions: { key:"windowTitle"; value:"Thumb Status" }
+    }
+}
+
+node: {
+    calculator: "ShowImage"
+    input_stream: "voice_status"
+    map_node_options: {
+        stringOptions: { key:"windowTitle"; value:"Voice Status" }
+    }
+}
+
 
 node: {
   calculator: "ConsumerNode"
