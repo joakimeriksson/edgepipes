@@ -228,7 +228,9 @@ class CaptureNode(Calculator):
 
     def process(self):
         if self.cap:
-            _, frame = self.cap.read()
+            success, frame = self.cap.read()
+            if not success:
+                return False
         elif self.screens:
             # Get raw pixels from the screen, save it to a Numpy array
             frame = np.array(self.screens.grab(self.monitor_area))
