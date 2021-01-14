@@ -1,0 +1,113 @@
+# MediaPipe graph that performs YoloV3 in CV2 detection on a live video stream.
+# Images coming into and out of the graph.
+
+input_stream: "input_video"
+output_stream: "output_video"
+
+# Calculate diff on image and only send on when large diff is detected
+node: {
+  calculator: "ImageMovementDetector"
+  input_stream: "input_video"
+  output_stream: "motion_detected"
+  map_node_options: {
+    doubleOptions: { key:"threshold"; value:0.02 }
+  }
+}
+
+node: {
+  calculator: "YoloDetector"
+  input_stream: "motion_detected"
+  output_stream: "yolo_object_detector_img"
+  output_stream: "yolo_detections"
+}
+
+# Applies a box and label annotator to the image
+node: {
+  calculator: "DrawDetections"
+  input_stream: "motion_detected"
+  input_stream: "yolo_detections"
+  output_stream: "output_video"
+}
+
+# Publish the input video
+node: {
+    calculator: "MQTTPublishCalculator"
+    input_stream: "input_video"
+    map_node_options: {
+    stringOptions: { key:"topic"; value:"ha/mqttcam/live" }
+  }
+}
+
+# Publish the image of detection
+node: {
+    calculator: "MQTTPublishCalculator"
+    input_stream: "yolo_object_detector_img"
+    map_node_options: {
+    stringOptions: { key:"topic"; value:"ha/mqttcam/yolo" }
+  }
+}
+
+# Send MQTT detection message
+node: {
+    calculator: "MQTTPublishYoloClass"
+    input_stream: "yolo_detections"
+    map_node_options: {
+    stringOptions: { key:"topic"; value:"ha/tts/say" }
+  }
+}
+
+# ---------------------------------
+# Second pipeline - another camera
+# ---------------------------------
+node: {
+  calculator: "CaptureNode"
+  output_stream: "input_video_2"
+  map_node_options: {
+    stringOptions: { key:"video"; value:"rtsp://192.168.1.237:7447/5c8d2bf990085177ff91c7a2_2" }
+  }
+}
+
+# Calculate diff on image and only send on when large diff is detected
+node: {
+  calculator: "ImageMovementDetector"
+  input_stream: "input_video_2"
+  output_stream: "motion_detected_2"
+  map_node_options: {
+    doubleOptions: { key:"threshold"; value:0.02 }
+  }
+}
+
+# Yolo on 2:nb camera
+node: {
+  calculator: "YoloDetector"
+  input_stream: "motion_detected_2"
+  output_stream: "yolo_object_detector_img_2"
+  output_stream: "yolo_detections_2"
+}
+
+# Publish the input video
+node: {
+    calculator: "MQTTPublishCalculator"
+    input_stream: "input_video_2"
+    map_node_options: {
+    stringOptions: { key:"topic"; value:"ha/mqttcam/live2" }
+  }
+}
+
+# Publish the yolo detection image
+node: {
+    calculator: "MQTTPublishCalculator"
+    input_stream: "yolo_object_detector_img_2"
+    map_node_options: {
+    stringOptions: { key:"topic"; value:"ha/mqttcam/yolo2" }
+  }
+}
+
+# Send MQTT detection message
+node: {
+    calculator: "MQTTPublishYoloClass"
+    input_stream: "yolo_detections_2"
+    map_node_options: {
+    stringOptions: { key:"topic"; value:"ha/tts/say" }
+  }
+}
